@@ -893,13 +893,67 @@
 @media(max-width:520px){.app{width:100%;box-shadow:none}.content{padding:16px}.hero{padding:22px 16px 28px}.header{padding:10px 14px}input,select,textarea{font-size:16px!important}button{touch-action:manipulation} .bottom-nav{padding-bottom:env(safe-area-inset-bottom)}}
 @media(max-width:360px){.hero h2{font-size:1.9rem}.content{padding:12px}.header{gap:4px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
-</style>
+
+      /* Rotas e comandos expandidos: controles com alvos confortáveis em telas pequenas. */
+      .feature-destination {
+        margin-top: 18px;
+        padding: 18px;
+        border: 1px solid #b5cbed;
+        border-radius: 19px;
+        background: linear-gradient(140deg,#ebf4ff,#f4fafb);
+      }
+      .feature-destination h2 { margin: 7px 0 8px; font-size: 1.22rem; line-height: 1.2; }
+      .feature-destination p { margin: 6px 0; line-height: 1.5; font-size: .86rem; }
+      .feature-destination .button { margin: 13px 0 8px; width: 100%; }
+      .feature-destination small { display: block; line-height: 1.45; color: var(--muted); }
+      .feature-eyebrow { color: var(--blue-dark); font-size: .71rem; font-weight: 900; letter-spacing: .04em; }
+      .destination-chips, .command-grid { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 14px; }
+      .destination-chip, .command-chip {
+        max-width: 100%; min-width: 0; min-height: 44px; padding: 9px 12px;
+        border: 1px solid #bccce5; border-radius: 12px; background: white;
+        color: var(--navy); font-size: .83rem; font-weight: 750; text-align: left;
+        overflow-wrap: anywhere; line-height: 1.4;
+      }
+      .destination-chip { background: #eef4ff; }
+      .destination-chip:hover, .command-chip:hover { border-color: var(--blue); background: #e2eeff; }
+      .voice-help-group { margin: 18px 0; padding: 15px; border: 1px solid var(--line); border-radius: 17px; }
+      .voice-help-group h3 { margin: 0 0 12px; font-size: 1rem; }
+      .voice-help-group .command-grid { margin: 0; }
+      .route-results { display: grid; gap: 12px; }
+      .route-choice { width: 100%; min-width: 0; text-align: left; color: var(--ink); }
+      .route-choice:hover { border-color: var(--blue); background: #f7faff; }
+      .route-card-top { display: flex; justify-content: space-between; align-items: start; gap: 8px; margin-bottom: 9px; }
+      .route-kicker { font-size: .71rem; letter-spacing: .025em; font-weight: 850; color: var(--blue-dark); line-height: 1.45; }
+      .route-duration { flex-shrink: 0; color: var(--navy); font-size: .86rem; }
+      .route-choice h3 { display: block; margin: 0 0 12px; font-size: 1.04rem; line-height: 1.4; overflow-wrap: anywhere; }
+      .route-choice h3 span { color: var(--blue); }
+      .route-choice p { margin: 10px 0; font-size: .86rem; color: var(--ink); line-height: 1.5; }
+      .route-choice small { display: block; color: var(--muted); line-height: 1.45; }
+      .route-lines { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
+      .route-line-pill { padding: 6px 11px; border-radius: 9px; background: var(--blue-dark); color: white; font-weight: 900; }
+      .route-label { font-size: .78rem; color: var(--muted); }
+      .route-result-count { margin: 10px 0 13px; font-weight: 800; }
+      .quick-grid .quick-button { min-width: 0; overflow-wrap: anywhere; }
+      .field input { width: 100%; max-width: 100%; }
+      .mic-fab { max-width: calc(100vw - 28px); }
+      .route-choice:focus-visible, .command-chip:focus-visible, .destination-chip:focus-visible { outline: 4px solid var(--focus); outline-offset: 2px; }
+      @media (max-width: 380px) {
+        .feature-destination { padding: 14px; }
+        .route-choice { padding: 12px; }
+        .route-card-top { flex-direction: column; }
+        .mic-fab strong { font-size: .76rem; }
+        .destination-chip, .command-chip { font-size: .79rem; }
+      }
+      body.high-contrast .feature-destination { background: #fff; border: 2px solid #000; }
+      body.high-contrast .route-choice, body.high-contrast .command-chip, body.high-contrast .destination-chip { border: 2px solid #000; color: #000; }
+
+    </style>
   </head>
   <body>
     <a class="skip-link" href="#main-content">Pular para o conteúdo</a>
     <div class="app" id="app">
       <div class="demo-banner">
-        Protótipo demonstrativo — linhas, horários, mapas e trajetos são simulados.
+        Protótipo demonstrativo — trajetos, conexões e tempos são exemplos, não dados em tempo real.
       </div>
       <header class="header">
         <button class="icon-button" id="back-button" aria-label="Voltar" hidden>
@@ -1019,7 +1073,9 @@
         authMode: "login",
         account: null,
         selectedNeeds: [],
-        selectedLine: "201",
+        selectedLine: "310",
+        selectedRouteId: null,
+        favoriteLines: ["310", "904", "201"],
         speechRate: 1,
         prefs: {
           voiceCommands: true,
@@ -1044,7 +1100,9 @@
         tripOptions: { title: "Opções de trajeto", render: renderTripOptions },
         tripActive: { title: "Viagem em andamento", render: renderTripActive },
         location: { title: "Minha localização", render: renderLocation },
-        line201: { title: "Linha 201", render: renderLine },
+        line201: { title: "Informações da linha", render: renderLine },
+        lines: { title: "Linhas disponíveis", render: renderLines },
+        voiceHelp: { title: "Guia de comandos", render: renderVoiceHelp },
         wait: { title: "Apoio no embarque", render: renderWait },
         waitConfirm: { title: "Confirmar apoio", render: renderWaitConfirm },
         requestStatus: { title: "Status da solicitação", render: renderRequestStatus },
@@ -1062,6 +1120,106 @@
         account: { title: "Dados da conta", render: renderAccount },
       };
 
+      // Endereços e denominações públicos; conexões, tempos e opções abaixo são cenários de teste.
+      // A linha 310 e a parada do Instituto foram confirmadas pela própria instituição.
+      const INSTITUTE = "Instituto Roberto Miranda";
+      const INSTITUTE_ADDRESS = "Rua Netuno, 90 — Jardim do Sol, Londrina/PR";
+      const LINES = [
+        { number: "310", name: "Jardim do Sol", note: "Linha indicada pelo Instituto Roberto Miranda; parada em frente à instituição", source: "instituicao" },
+        { number: "904", name: "Integração UEL / Catuaí / terminais", note: "Opção de integração ilustrativa; confirme sentido e parada", source: "consulta" },
+        { number: "351", name: "Terminal Central / Terminal Oeste", note: "Linha incluída para exemplos de deslocamento", source: "consulta" },
+        { number: "311", name: "Santa Rita", note: "Linha incluída para exemplos de deslocamento", source: "consulta" },
+        { number: "213", name: "Estação Catuaí", note: "Linha incluída para exemplos de deslocamento", source: "consulta" },
+        { number: "931", name: "Terminais / Londrina Norte", note: "Linha incluída para exemplos de deslocamento", source: "consulta" },
+        { number: "201", name: "Vivi Xavier (cenário do protótipo)", note: "Associação entre linha e destino não verificada; exemplo", source: "demo" },
+        { number: "108", name: "Linha 108 (cenário do protótipo)", note: "Itinerário não confirmado nesta demonstração", source: "demo" },
+        { number: "305", name: "Linha 305 (cenário do protótipo)", note: "Itinerário não confirmado nesta demonstração", source: "demo" },
+        { number: "427", name: "Linha 427 (cenário do protótipo)", note: "Itinerário não confirmado nesta demonstração", source: "demo" },
+      ];
+      const ROUTES = [
+        { id: "irm-central", from: "Terminal Central", to: INSTITUTE, lines: ["310"], duration: "25–45 min", via: "Embarque na linha 310 no sentido Jardim do Sol e confirme a parada da Rua Netuno.", description: "Saída pelo Terminal Central", level: "Direto · demonstração", verified: true },
+        { id: "irm-oeste", from: "Terminal Oeste", to: INSTITUTE, lines: ["310"], duration: "20–40 min", via: "Confira o sentido da linha 310 e os embarques disponíveis no terminal.", description: "Saída pela região oeste", level: "Sem baldeação · verificar operação", verified: false },
+        { id: "irm-uel", from: "UEL", to: INSTITUTE, lines: ["904", "310"], duration: "50–80 min", via: "Cenário de integração: linha 904 rumo ao Terminal Oeste, depois a linha 310; confirme o sentido.", description: "Universidade Estadual de Londrina", level: "1 integração · ilustrativa", verified: false },
+        { id: "irm-catuai", from: "Shopping Catuaí", to: INSTITUTE, lines: ["904", "310"], duration: "45–75 min", via: "Cenário de integração: linha 904 rumo ao Terminal Oeste, depois a linha 310.", description: "Saída do Shopping Catuaí", level: "1 integração · ilustrativa", verified: false },
+        { id: "irm-vivi", from: "Terminal Vivi Xavier", to: INSTITUTE, lines: ["904", "310"], duration: "60–95 min", via: "Cenário via Terminal Oeste: verifique se há serviço da linha 904 no sentido desejado antes de transferir para a 310.", description: "Saída da região norte", level: "1 integração · ilustrativa", verified: false },
+        { id: "uel-oeste", from: "Terminal Oeste", to: "UEL", lines: ["904"], duration: "25–50 min", via: "Exemplo de percurso pela linha 904; confirme sentido, parada e acessibilidade.", description: "Chegada ao campus", level: "Direto · ilustrativo", verified: false },
+        { id: "uel-central", from: "Terminal Central", to: "UEL", lines: ["351", "904"], duration: "50–80 min", via: "Integração demonstrativa no Terminal Oeste; confirme as linhas na operação atual.", description: "Via Terminal Oeste", level: "1 integração · ilustrativa", verified: false },
+        { id: "catuai-vivi", from: "Terminal Vivi Xavier", to: "Shopping Catuaí", lines: ["904"], duration: "55–90 min", via: "Percurso ilustrativo na linha 904, a depender do sentido do veículo.", description: "Travessia da cidade", level: "Direto · ilustrativo", verified: false },
+        { id: "catuai-central", from: "Terminal Central", to: "Shopping Catuaí", lines: ["213"], duration: "35–65 min", via: "Exemplo pela linha 213 Estação Catuaí. Confirme em qual parada descer.", description: "Rumo à região do Catuaí", level: "Direto · ilustrativo", verified: false },
+        { id: "oeste-central", from: "Terminal Central", to: "Terminal Oeste", lines: ["351"], duration: "20–45 min", via: "Exemplo de trajeto entre terminais.", description: "Entre terminais", level: "Direto · ilustrativo", verified: false },
+        { id: "central-oeste", from: "Terminal Oeste", to: "Terminal Central", lines: ["351"], duration: "20–45 min", via: "Exemplo de retorno entre terminais.", description: "Entre terminais", level: "Direto · ilustrativo", verified: false },
+        { id: "santa-rita", from: "Terminal Central", to: "Jardim Santa Rita", lines: ["311"], duration: "30–55 min", via: "Exemplo de percurso pela linha 311. Confirme itinerário.", description: "Bairro Santa Rita", level: "Direto · ilustrativo", verified: false },
+        { id: "norte-shopping", from: "Terminal Oeste", to: "Londrina Norte Shopping", lines: ["931"], duration: "40–70 min", via: "Exemplo pela linha 931. O acesso ao shopping foi divulgado pela CMTU.", description: "Londrina Norte Shopping", level: "Direto · ilustrativo", verified: false },
+        { id: "vivi-demo", from: "Terminal Central", to: "Vivi Xavier", lines: ["201"], duration: "35–65 min", via: "Cenário do protótipo. O número de linha deste exemplo não foi validado.", description: "Trajeto demonstrativo", level: "Exemplo não verificado", verified: false },
+        { id: "igapo-demo", from: "Centro", to: "Lago Igapó", lines: ["108"], duration: "25–45 min", via: "Cenário de teste sem itinerário oficial integrado.", description: "Parque e lazer", level: "Exemplo não verificado", verified: false },
+      ];
+      const ROUTE_ORIGINS = ["Terminal Central", "Terminal Oeste", "UEL", "Shopping Catuaí", "Terminal Vivi Xavier", "Centro"];
+      const VOICE_EXAMPLES = [
+        { section: "Viagens e destinos", commands: ["Rotas para o Instituto Roberto Miranda", "Como chegar ao Instituto", "Rota saindo da UEL para o Instituto", "Rota do Shopping Catuaí para o Instituto", "Rota do Terminal Central para o Instituto", "Destino UEL", "Origem Terminal Oeste", "Buscar rotas", "Ver opção 2", "Iniciar viagem", "Ler minha rota"] },
+        { section: "Linhas e mobilidade", commands: ["Mostrar todas as linhas", "Linha 310", "Linha 904", "Linha 351", "Favoritar linha 310", "Minhas linhas favoritas", "Solicitar apoio", "Preciso de mais tempo para embarcar", "Ativar plataforma elevatória", "Minha localização"] },
+        { section: "Navegação e leitura", commands: ["Abrir mapa", "Planejar viagem", "Minhas viagens", "Abrir perfil", "Abrir configurações", "Abrir acessibilidade", "Mostrar notificações", "Histórico de viagens", "Ler tela", "Parar leitura", "Aumentar texto", "Diminuir texto", "Ativar alto contraste", "Desativar alto contraste", "Próximo elemento", "Elemento anterior", "Selecionar", "Voltar", "Início", "Ajuda", "Parar de ouvir"] },
+      ];
+
+      function canonicalPlace(raw) {
+        const value = normalize(raw || "");
+        if (!value) return "";
+        if (/roberto miranda|instituto dos cegos|instituto de cegos|escola chico xavier|instituto miranda|^(?:o |ao |do )?instituto$/.test(value)) return INSTITUTE;
+        if (/shopping catuai|^catuai$|^catua[iy]$/.test(value)) return "Shopping Catuaí";
+        if (/terminal oeste|terminal regiao oeste|terminal da regiao oeste/.test(value)) return "Terminal Oeste";
+        if (/terminal central|terminal urbano central/.test(value)) return "Terminal Central";
+        if (/terminal vivi xavier|terminal do vivi xavier/.test(value)) return "Terminal Vivi Xavier";
+        if (/universidade estadual|^uel$|campus da uel/.test(value)) return "UEL";
+        if (/shopping norte|londrina norte/.test(value)) return "Londrina Norte Shopping";
+        if (/jardim santa rita|^santa rita$/.test(value)) return "Jardim Santa Rita";
+        if (/lago igapo|^igapo$/.test(value)) return "Lago Igapó";
+        if (/^centro$|centro de londrina/.test(value)) return "Centro";
+        if (/^minha localizacao$|^onde estou$/.test(value)) return "Minha localização";
+        return raw.trim().replace(/\b\w/g, (letter) => letter.toUpperCase());
+      }
+
+      function routeChoices() {
+        const destination = canonicalPlace(state.destination);
+        const origin = canonicalPlace(state.origin);
+        const hasOrigin = origin && origin !== "Minha localização";
+        const matches = ROUTES.filter((route) => normalize(route.to) === normalize(destination));
+        return matches.sort((a, b) => {
+          const aMatch = hasOrigin && normalize(a.from) === normalize(origin) ? -1 : 0;
+          const bMatch = hasOrigin && normalize(b.from) === normalize(origin) ? -1 : 0;
+          return aMatch - bMatch;
+        });
+      }
+
+      function linePills(lines) {
+        return lines.map((number, index) => `${index ? '<span aria-hidden="true">→</span>' : ''}<span class="route-line-pill">${escapeHtml(number)}</span>`).join("");
+      }
+
+      function routeCard(route, index) {
+        return `<button type="button" class="route-card route-choice ${index === 0 ? "recommended" : ""}" data-route-id="${escapeHtml(route.id)}" aria-label="Opção ${index + 1}: ${escapeHtml(route.from)} para ${escapeHtml(route.to)}, linhas ${escapeHtml(route.lines.join(" e "))}, tempo apenas ilustrativo ${escapeHtml(route.duration)}">
+          <div class="route-card-top"><span class="route-kicker">OPÇÃO ${index + 1} · ${escapeHtml(route.level)}</span><strong class="route-duration">${escapeHtml(route.duration)}</strong></div>
+          <h3>${escapeHtml(route.from)} <span aria-hidden="true">→</span> ${escapeHtml(route.to)}</h3>
+          <div class="route-lines">${linePills(route.lines)}<span class="route-label">${escapeHtml(route.description)}</span></div>
+          <p>${escapeHtml(route.via)}</p>
+          <small>⏱ Tempo fictício para demonstrar a interface · Toque para detalhes</small>
+        </button>`;
+      }
+
+      function showSelectedRoute(route) {
+        state.selectedRouteId = route.id;
+        state.origin = route.from;
+        state.destination = route.to;
+        navigate("tripActive");
+        showMessage("Rota de demonstração selecionada", `${route.from} até ${route.to}, linhas ${route.lines.join(" + ")}. Confira na operadora antes de viajar.`);
+      }
+
+      function selectedRoute() {
+        return ROUTES.find((route) => route.id === state.selectedRouteId) || null;
+      }
+
+      function selectRouteByNumber(number) {
+        const chosen = routeChoices()[number - 1];
+        if (!chosen) return showMessage("Opção inexistente", "Primeiro selecione um destino e abra as opções disponíveis.", true);
+        showSelectedRoute(chosen);
+      }
       const main = document.querySelector("#main-content");
       const title = document.querySelector("#screen-title");
       const backButton = document.querySelector("#back-button");
@@ -1172,41 +1330,67 @@
         return `
           <section class="hero" data-readable>
             <div class="brand"><span class="brand-mark" aria-hidden="true"></span> VIA</div>
-            <p class="eyebrow">Olá. Este é o protótipo VIA.</p>
+            <p class="eyebrow">Sua mobilidade, seu caminho.</p>
             <h2>Para onde você quer ir?</h2>
-            <button class="search-button" data-go="planner">
-              ${icon("search")}<span>Buscar destino ou endereço</span><span aria-hidden="true">›</span>
-            </button>
-            <button class="voice-card" id="hero-voice-button">
-              ${icon("mic")}
-              <span><strong>Planejar por voz</strong><small>Diga “Rota para UEL”</small></span>
-              <span aria-hidden="true">›</span>
-            </button>
+            <button class="search-button" data-go="planner">${icon("search")}<span>Buscar destino ou endereço</span><span aria-hidden="true">›</span></button>
+            <button class="voice-card" id="hero-voice-button">${icon("mic")}<span><strong>Planejar por voz</strong><small>Diga “Rotas para o Instituto Roberto Miranda”</small></span><span aria-hidden="true">›</span></button>
           </section>
           <section class="content">
             <h2 class="section-title">Acesso rápido</h2>
             <div class="quick-grid">
               <button class="quick-button primary" data-go="planner">${icon("route")}<span>Planejar viagem</span></button>
               <button class="quick-button" data-go="map">${icon("pin")}<span>Abrir mapa</span></button>
+              <button class="quick-button" data-go="lines">${icon("bus")}<span>Ver 10 linhas</span></button>
+              <button class="quick-button" data-go="voiceHelp">${icon("mic")}<span>Comandos de voz</span></button>
             </div>
-            <h2 class="section-title" style="margin-top:24px">Próximos ônibus simulados</h2>
-            <div class="line-list" aria-label="Linhas próximas">
-              ${lineRow("201", "Terminal Central • Vivi Xavier", "3 min", "line201")}
-              ${lineRow("108", "Terminal Central • Acapulco", "8 min", "line201")}
-              ${lineRow("305", "Terminal Oeste • UEL", "12 min", "line201")}
+            <div class="feature-destination">
+              <span class="feature-eyebrow">DESTAQUE · ACESSIBILIDADE</span>
+              <h2>Instituto Roberto Miranda</h2>
+              <p>Rua Netuno, 90 · Jardim do Sol, Londrina</p>
+              <p>Conheça 5 partidas sugeridas: Terminal Central, Terminal Oeste, UEL, Catuaí e Vivi Xavier.</p>
+              <button class="button" data-action="institute">Ver 5 opções de acesso</button>
+              <small>Fonte institucional: linha 310 com parada em frente ao Instituto. Integrações ilustrativas.</small>
             </div>
+            <h2 class="section-title" style="margin-top:22px">Outros destinos</h2>
+            <div class="destination-chips">
+              ${["UEL", "Shopping Catuaí", "Terminal Oeste", "Jardim Santa Rita", "Londrina Norte Shopping", "Lago Igapó"].map((place) => `<button class="destination-chip" data-set-destination="${escapeHtml(place)}">${escapeHtml(place)} <span aria-hidden="true">›</span></button>`).join("")}
+            </div>
+            <h2 class="section-title" style="margin-top:24px">Linhas para explorar <small>· dados de exemplo</small></h2>
+            <div class="line-list" aria-label="Catálogo de linhas">
+              ${["310", "904", "351", "311"].map((number) => { const line = LINES.find((value) => value.number === number); return lineRow(number, line.name, "Ver", "line201"); }).join("")}
+            </div>
+            <button class="button secondary" style="width:100%" data-go="lines">Explorar todas as linhas</button>
           </section>`;
       }
 
-      function lineRow(number, destination, time, target) {
-        return `<button class="line-button" data-go="${target}" aria-label="Linha ${number}, ${destination}, previsão simulada ${time}">
+            function lineRow(number, destination, time, target) {
+        return `<button class="line-button" data-open-line="${number}" aria-label="Ver informações da linha ${number}, ${escapeHtml(destination)}. Dados simulados.">
           <span class="line-number">${number}</span>
-          <span><strong>${destination}</strong><small>Veículo simulado a caminho</small></span>
-          <span class="arrival">${time}</span>
+          <span><strong>${escapeHtml(destination)}</strong><small>Informações e opções de demonstração</small></span>
+          <span class="arrival">${escapeHtml(time)}</span>
         </button>`;
       }
 
-      function renderMap() {
+      function renderLines() {
+        return `<section class="content">
+          <h2 class="section-title">Linhas disponíveis para testar</h2>
+          <p class="notice">10 linhas no catálogo. O número de linha não garante itinerário, previsão, sentido ou acessibilidade em tempo real.</p>
+          <div class="line-list" style="margin-top:15px">${LINES.map((line) => lineRow(line.number, line.name, "Detalhes", "line201")).join("")}</div>
+        </section>`;
+      }
+
+      function renderVoiceHelp() {
+        return `<section class="content">
+          <h2 class="section-title">Mais de 40 frases para experimentar</h2>
+          <p class="notice">Toque em uma frase para executar sem microfone. Para falar, toque no botão de voz. A escuta não fica ligada continuamente.</p>
+          ${VOICE_EXAMPLES.map((section) => `<div class="voice-help-group"><h3>${escapeHtml(section.section)}</h3><div class="command-grid">${section.commands.map((command) => `<button class="command-chip" data-command="${escapeHtml(command)}">${escapeHtml(command)}</button>`).join("")}</div></div>`).join("")}
+          <h2 class="section-title">Ou digite um comando</h2>
+          <form class="fallback" id="help-command-form"><input id="help-command-input" placeholder="Ex.: Linha 310" aria-label="Digitar comando" required /><button class="button" type="submit">Executar</button></form>
+          <p class="notice" style="margin-top:14px">O reconhecimento depende do navegador. Para testar os comandos, a digitação sempre funciona.</p>
+        </section>`;
+      }
+
+            function renderMap() {
         return `<section class="map-demo" aria-label="Mapa demonstrativo da região central">
           <span class="map-label one">${icon("bus")} Linha 201</span>
           <span class="map-label two">${icon("bus")} Linha 108</span>
@@ -1220,62 +1404,65 @@
 
       function renderPlanner() {
         return `<section class="content">
+          <h2 class="section-title">Encontre um trajeto</h2>
+          <p class="notice">Selecione uma origem e um destino. Opções ilustrativas, sem consulta a horários reais.</p>
           <label class="field">Origem
-            <input id="origin-input" value="${escapeHtml(state.origin)}" autocomplete="street-address" />
+            <input id="origin-input" list="origin-suggestions" value="${escapeHtml(state.origin)}" placeholder="De onde você vai sair?" autocomplete="off" />
           </label>
-          <label class="field">Destino
-            <input id="destination-input" value="${escapeHtml(state.destination)}" placeholder="Informe o destino" autocomplete="street-address" />
+          <datalist id="origin-suggestions">${ROUTE_ORIGINS.map((name) => `<option value="${escapeHtml(name)}"></option>`).join("")}</datalist>
+          <div class="destination-chips" aria-label="Origens rápidas">${ROUTE_ORIGINS.map((place) => `<button class="destination-chip" data-set-origin="${escapeHtml(place)}">${escapeHtml(place)}</button>`).join("")}</div>
+          <label class="field" style="margin-top:18px">Destino
+            <input id="destination-input" list="destination-suggestions" value="${escapeHtml(state.destination)}" placeholder="Para onde deseja ir?" autocomplete="off" />
           </label>
-          <button class="button" style="width:100%" data-action="confirm-route">Ver opções de trajeto</button>
-          <div id="route-results" style="margin-top:16px">${state.destination ? routeResults() : ""}</div>
-          <section class="card" style="margin-top:16px">
-            <h3>Preencher por voz</h3>
-            <p>Diga “origem Terminal Central”, “destino UEL” ou “rota para UEL”.</p>
+          <datalist id="destination-suggestions">${[INSTITUTE, ...new Set(ROUTES.map((route) => route.to))].map((name) => `<option value="${escapeHtml(name)}"></option>`).join("")}</datalist>
+          <div class="destination-chips" aria-label="Destinos rápidos">
+            ${[INSTITUTE, "UEL", "Shopping Catuaí", "Terminal Oeste", "Londrina Norte Shopping"].map((place) => `<button class="destination-chip" data-set-destination="${escapeHtml(place)}">${escapeHtml(place)}</button>`).join("")}
+          </div>
+          <button class="button" style="width:100%;margin-top:17px" data-action="confirm-route">Ver opções de trajeto</button>
+          <section class="card" style="margin-top:18px">
+            <h3>Também funciona por voz</h3>
+            <p>Experimente “Origem UEL”, “Destino Instituto Roberto Miranda”, “Buscar rotas” ou “Rota do Shopping Catuaí para o Instituto”.</p>
+            <button class="button secondary" style="width:100%;margin-top:12px" data-go="voiceHelp">Consultar todos os comandos</button>
           </section>
         </section>`;
       }
 
       function routeResults() {
-        return `<button class="route-card recommended" style="width:100%;text-align:left;color:inherit" data-go="tripActive" data-readable>
-          <h3><span>Melhor opção simulada</span><span>32 min</span></h3>
-          <div class="steps"><span>Caminhe 4 min</span><span>—</span><b>305</b><span>—</span><span>Caminhe 3 min</span></div>
-        </button>
-        <button class="route-card" style="width:100%;text-align:left;color:inherit" data-go="tripActive" data-readable>
-          <h3><span>Alternativa simulada</span><span>41 min</span></h3>
-          <div class="steps"><b>201</b><span>—</span><b>108</b><span>1 integração</span></div>
-        </button>`;
+        const options = routeChoices();
+        if (!options.length) return `<div class="notice error">Não há rotas cadastradas para este destino. Experimente o Instituto Roberto Miranda, UEL, Shopping Catuaí, Terminal Oeste ou outros destinos sugeridos. Isso não significa ausência de transporte.</div>`;
+        const origin = canonicalPlace(state.origin);
+        const direct = origin !== "Minha localização" && options.some((route) => normalize(route.from) === normalize(origin));
+        return `<p class="route-result-count">${options.length} ${options.length === 1 ? "opção cadastrada" : "opções cadastradas"} para ${escapeHtml(state.destination)}.</p>
+          ${origin && origin !== "Minha localização" && !direct ? `<p class="notice">Não foi encontrada uma opção cadastrada saindo exatamente de <strong>${escapeHtml(state.origin)}</strong>. As alternativas abaixo partem de outros pontos; escolha uma origem adequada.</p>` : ""}
+          <div class="route-results">${options.map((route, index) => routeCard(route, index)).join("")}</div>`;
       }
 
       function renderTripOptions() {
         return `<section class="content">
-          <p class="eyebrow">ATÉ</p>
-          <h2>${escapeHtml(state.destination || "UEL — Universidade Estadual de Londrina")}</h2>
-          <p class="notice">Opções demonstrativas saindo agora da sua localização.</p>
+          <p class="eyebrow">DESTINO SELECIONADO</p>
+          <h2>${escapeHtml(state.destination || "Escolha seu destino")}</h2>
+          ${canonicalPlace(state.destination) === INSTITUTE ? `<p>${escapeHtml(INSTITUTE_ADDRESS)}</p><div class="notice">A instituição indica a <strong>linha 310 – Jardim do Sol</strong> com parada em frente. Verifique sentidos e integrações antes de viajar.</div>` : `<p class="notice">Opções demonstrativas, sem horários oficiais, geolocalização da rota ou previsão em tempo real.</p>`}
           <div style="margin-top:16px">${routeResults()}</div>
+          <button class="button secondary" style="width:100%;margin-top:14px" data-go="planner">Alterar origem ou destino</button>
         </section>`;
       }
 
       function renderTripActive() {
-        return `<section class="map-demo" aria-label="Mapa simulado da viagem ativa">
-          <span class="map-label one">${icon("bus")} Linha 305</span>
-          <span class="user-position" aria-hidden="true"></span>
+        const route = selectedRoute();
+        if (!route) return `<section class="content"><p class="notice">Selecione uma opção de trajeto para ver os detalhes.</p><button class="button" data-go="planner">Planejar viagem</button></section>`;
+        return `<section class="map-demo" aria-label="Desenho ilustrativo, não representa o trajeto real">
+          <span class="map-label one">${icon("bus")} ${escapeHtml(route.lines.join(" + "))}</span><span class="user-position" aria-hidden="true"></span>
         </section>
         <section class="content">
-          <article class="card" data-readable>
-            <p class="eyebrow">VIAGEM EM ANDAMENTO</p>
-            <h2>Desça em 4 paradas</h2>
-            <p>Destino: ${escapeHtml(state.destination || "UEL")}</p>
-            <div class="progress" style="margin-top:14px"><span></span></div>
-          </article>
-          <article class="card"><h3>Próxima parada</h3><p>Av. Maringá, 1.210 • aproximadamente 12 min</p></article>
-          <div class="quick-grid">
-            <button class="button secondary" data-action="speak-trip">Ouvir orientação</button>
-            <button class="button" data-go="trips">Encerrar viagem</button>
-          </div>
+          <article class="card" data-readable><p class="eyebrow">PRÉVIA DE VIAGEM · SIMULAÇÃO</p><h2>${escapeHtml(route.from)} → ${escapeHtml(route.to)}</h2><p>${escapeHtml(route.description)}</p><div class="route-lines" style="margin-top:12px">${linePills(route.lines)}</div></article>
+          <article class="card" data-readable><h3>Como seria este trajeto</h3><p>${escapeHtml(route.via)}</p><p style="margin-top:10px"><strong>Tempo fictício:</strong> ${escapeHtml(route.duration)}</p><p style="margin-top:10px">Nenhum ônibus ou parada está sendo acompanhado em tempo real. Consulte a operadora antes de embarcar.</p></article>
+          ${route.to === INSTITUTE ? `<article class="card"><h3>Chegada ao Instituto</h3><p>${escapeHtml(INSTITUTE_ADDRESS)}</p><p>Informação da instituição: a linha 310 tem parada em frente ao local.</p></article>` : ""}
+          <div class="quick-grid"><button class="button secondary" data-action="speak-trip">Ouvir esta rota</button><button class="button" data-go="tripOptions">Ver outras opções</button></div>
+          <button class="button secondary" style="width:100%;margin-top:12px" data-go="wait">Simular apoio no embarque</button>
         </section>`;
       }
 
-      function renderLocation() {
+            function renderLocation() {
         return `<section class="content">
           <div class="card">
             <h3>Localização do dispositivo</h3>
@@ -1287,24 +1474,20 @@
       }
 
       function renderLine() {
+        const line = LINES.find((item) => item.number === state.selectedLine) || LINES[0];
+        const favorites = state.favoriteLines.includes(line.number);
+        const options = ROUTES.filter((route) => route.lines.includes(line.number));
         return `<section class="content">
-          <article class="card" data-readable>
-            <span class="line-number">201</span>
-            <h2>Terminal Central • Vivi Xavier</h2>
-            <p>Operação e previsão simuladas para demonstração.</p>
-          </article>
-          <article class="route-card">
-            <h3><span>Próximo ônibus</span><span>3 min</span></h3>
-            <p>Veículo LD 2451 • dado simulado</p>
-          </article>
-          <div class="quick-grid">
-            <button class="button secondary" data-go="wait">Solicitar apoio</button>
-            <button class="button" data-go="planner">Planejar com esta linha</button>
-          </div>
+          <article class="card" data-readable><span class="line-number">${escapeHtml(line.number)}</span><h2>${escapeHtml(line.name)}</h2><p>${escapeHtml(line.note)}</p></article>
+          ${line.number === "310" ? `<div class="notice"><strong>Instituto Roberto Miranda:</strong> Rua Netuno, 90, Jardim do Sol. O Instituto informa que a linha 310 passa em frente. O itinerário foi modificado pela CMTU em dezembro de 2025.</div>` : `<div class="notice">Dados da linha sem acompanhamento ao vivo. Consulte a CMTU para o itinerário atualizado.</div>`}
+          <div class="quick-grid" style="margin-top:16px"><button class="button secondary" data-action="toggle-favorite">${favorites ? "★ Remover favorito" : "☆ Favoritar linha"}</button><button class="button" data-go="wait">Simular apoio</button></div>
+          <h2 class="section-title" style="margin-top:20px">Trajetos de demonstração envolvendo a linha</h2>
+          ${options.length ? `<div class="route-results">${options.map((route, index) => routeCard(route, index)).join("")}</div>` : `<p class="notice">Nenhum trajeto de exemplo cadastrado para esta linha.</p>`}
+          <button class="button secondary" style="width:100%;margin-top:14px" data-go="lines">Voltar ao catálogo de linhas</button>
         </section>`;
       }
 
-      function renderWait() {
+            function renderWait() {
         return `<section class="content">
           <div class="status-hero">
             ${icon("bus")}
@@ -1313,7 +1496,7 @@
           </div>
           <div class="card"><h3>Seu ponto</h3><p>Av. Paraná, 532 • ponto demonstrativo</p></div>
           <div class="line-list">
-            ${["201", "108", "305"].map((line) => `<button class="line-button" data-select-line="${line}"><span class="line-number">${line}</span><span><strong>Linha ${line}</strong><small>Selecione para continuar</small></span><span>${state.selectedLine === line ? "✓" : "›"}</span></button>`).join("")}
+            ${["310", "904", "351", "201", "108", "305"].map((line) => `<button class="line-button" data-select-line="${line}"><span class="line-number">${line}</span><span><strong>Linha ${line}</strong><small>Selecione para continuar</small></span><span>${state.selectedLine === line ? "✓" : "›"}</span></button>`).join("")}
           </div>
           <button class="button" style="width:100%;margin-top:18px" data-go="waitConfirm">Continuar</button>
         </section>`;
@@ -1362,7 +1545,8 @@
             <button class="quick-button" data-action="destination" data-value="Casa">${icon("pin")}<span>Casa</span></button>
             <button class="quick-button" data-action="destination" data-value="Trabalho">${icon("bus")}<span>Trabalho</span></button>
           </div>
-          <h2 class="section-title">Viagens recentes simuladas</h2>
+          <button class="menu-button" data-action="institute"><span>${icon("pin")}</span><span><strong>Instituto Roberto Miranda</strong><br><small>5 sugestões de partida para comparar</small></span><span>›</span></button>
+          <h2 class="section-title" style="margin-top:16px">Viagens recentes simuladas</h2>
           <button class="menu-button" data-action="destination" data-value="UEL"><span>${icon("route")}</span><span><strong>Centro → UEL</strong><br><small>Linha 305 • 34 min • ontem</small></span><span>›</span></button>
           <button class="menu-button" data-action="destination" data-value="Shopping Catuaí"><span>${icon("route")}</span><span><strong>Casa → Shopping Catuaí</strong><br><small>Linhas 201 + 427 • 46 min</small></span><span>›</span></button>
           <button class="button" style="width:100%" data-go="planner">Planejar nova viagem</button>
@@ -1376,7 +1560,7 @@
           <div class="account-card"><h2>${escapeHtml(name)}</h2><p>${escapeHtml(email)}</p></div>
           <div class="stack" style="margin-top:16px">
             ${menuLink("settings", "Configurações", "Voz, visual, idioma e privacidade", "settings")}
-            ${menuLink("favorites", "Linhas favoritas", "3 linhas salvas", "bus")}
+            ${menuLink("favorites", "Linhas favoritas", `${state.favoriteLines.length} linhas salvas`, "bus")}
             ${menuLink("history", "Histórico de viagens", "Trajetos demonstrativos", "route")}
             ${menuLink("notifications", "Notificações", "Alertas e avisos", "settings")}
             ${menuLink("account", "Dados da conta", "Nome, e-mail e telefone", "settings")}
@@ -1412,16 +1596,15 @@
             ${settingToggle("vibration", "Vibração", "Vibra em avisos quando disponível")}
             ${settingToggle("largeTargets", "Áreas de toque maiores", "Facilita a seleção de controles")}
           </div>
-          <h2 class="section-title">Comandos disponíveis</h2>
-          <div class="card">
-            <p>Abrir mapa • Planejar viagem • Minha localização • Linha 201 • Rota para UEL • Minhas viagens • Abrir configurações • Voltar • Início • Ler tela • Parar de ouvir • Próximo elemento • Elemento anterior • Selecionar.</p>
-          </div>
+          <h2 class="section-title">Guia completo de voz</h2>
+          <div class="card"><h3>Mais de 40 frases disponíveis</h3><p>Buscar rotas, escolher origens, selecionar opções, pedir apoio, ler instruções e personalizar acessibilidade.</p><button class="button secondary" style="width:100%;margin-top:12px" data-go="voiceHelp">Ver e testar todos os comandos</button></div>
           <h2 class="section-title">Alternativa por digitação</h2>
           <div class="fallback">
             <input class="command-input" id="typed-command" placeholder="Digite um comando" aria-label="Comando por texto" />
             <button class="button" data-action="typed-command">Executar</button>
           </div>
           <div class="voice-log" id="voice-log">Nenhum comando reconhecido nesta sessão.</div>
+          <p class="notice" style="margin-top:12px">Informações de referência: <a href="https://institutorobertomiranda.org.br/index.php/about/" target="_blank" rel="noopener noreferrer">Instituto Roberto Miranda</a> e <a href="https://cmtu.londrina.pr.gov.br/index.php/ult-noticias/2264-itinerario-de-quatro-linhas-do-transporte-coletivo-tera-mudancas-a-partir-de-segunda.html" target="_blank" rel="noopener noreferrer">CMTU</a>. Conexões e durações nesta interface são ilustrativas.</p>
           <p class="notice" style="margin-top:12px">O áudio não é gravado pelo VIA. O mecanismo de reconhecimento do navegador pode usar serviços externos do fornecedor do navegador.</p>
         </section>`;
       }
@@ -1462,14 +1645,15 @@
       }
 
       function renderFavorites() {
+        const favorites = LINES.filter((line) => state.favoriteLines.includes(line.number));
         return `<section class="content"><h2 class="section-title">Linhas favoritas</h2>
-          ${lineRow("201", "Terminal Central • Vivi Xavier", "3 min", "line201")}
-          ${lineRow("108", "Terminal Central • Acapulco", "8 min", "line201")}
-          ${lineRow("305", "Terminal Oeste • UEL", "12 min", "line201")}
+          <p class="notice">Selecione uma linha para ver opções. Favorite ou remova linhas na tela de detalhes.</p>
+          ${favorites.length ? `<div class="line-list" style="margin-top:15px">${favorites.map((line) => lineRow(line.number, line.name, "Abrir", "line201")).join("")}</div>` : `<p class="card">Ainda não há linhas favoritas. Abra o catálogo para adicionar.</p>`}
+          <button class="button secondary" style="width:100%;margin-top:14px" data-go="lines">Ver todas as linhas</button>
         </section>`;
       }
 
-      function renderHistory() {
+            function renderHistory() {
         return `<section class="content"><h2 class="section-title">Histórico demonstrativo</h2>
           <article class="card"><h3>Centro → UEL</h3><p>Ontem • Linha 305 • 34 min</p></article>
           <article class="card"><h3>Casa → Shopping Catuaí</h3><p>Segunda • Linhas 201 + 427</p></article>
@@ -1522,13 +1706,15 @@
 
       function render() {
         const config = screens[state.screen];
-        title.textContent = config.title;
+        title.textContent = state.screen === "line201" ? `Linha ${state.selectedLine}` : config.title;
         main.innerHTML = config.render();
         const accessScreens = ["welcome", "auth", "email", "recovery", "personalize", "home"];
         const navScreens = [
           "home",
           "map",
           "line201",
+          "lines",
+          "voiceHelp",
           "trips",
           "tripOptions",
           "profile",
@@ -1544,7 +1730,7 @@
         micButton.dataset.screenHidden = String(accessScreens.includes(state.screen));
         document.querySelectorAll(".bottom-nav button").forEach((button) => {
           const activeScreen =
-            state.screen === "line201"
+            ["line201", "lines"].includes(state.screen)
               ? "map"
               : ["history", "tripOptions"].includes(state.screen)
                 ? "trips"
@@ -1562,6 +1748,54 @@
       }
 
       function bindScreenEvents() {
+        main.querySelectorAll("[data-open-line]").forEach((button) => {
+          button.addEventListener("click", () => {
+            state.selectedLine = button.dataset.openLine;
+            navigate("line201");
+          });
+        });
+        main.querySelectorAll("[data-route-id]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const route = ROUTES.find((item) => item.id === button.dataset.routeId);
+            if (route) showSelectedRoute(route);
+          });
+        });
+        main.querySelectorAll('[data-action="institute"]').forEach((button) => {
+          button.addEventListener("click", () => {
+            state.origin = "Minha localização";
+            state.destination = INSTITUTE;
+            navigate("tripOptions");
+          });
+        });
+        main.querySelectorAll("[data-set-origin]").forEach((button) => {
+          button.addEventListener("click", () => {
+            state.origin = button.dataset.setOrigin;
+            render();
+            announce(`Origem selecionada: ${state.origin}`);
+          });
+        });
+        main.querySelectorAll("[data-set-destination]").forEach((button) => {
+          button.addEventListener("click", () => {
+            state.destination = button.dataset.setDestination;
+            navigate("tripOptions");
+          });
+        });
+        main.querySelectorAll("[data-command]").forEach((button) => {
+          button.addEventListener("click", () => processCommand(button.dataset.command));
+        });
+        main.querySelector("#help-command-form")?.addEventListener("submit", (event) => {
+          event.preventDefault();
+          processCommand(document.querySelector("#help-command-input").value);
+        });
+        main.querySelector('[data-action="toggle-favorite"]')?.addEventListener("click", () => {
+          const number = state.selectedLine;
+          state.favoriteLines = state.favoriteLines.includes(number)
+            ? state.favoriteLines.filter((value) => value !== number)
+            : [...state.favoriteLines, number];
+          localStorage.setItem("via-favorite-lines", JSON.stringify(state.favoriteLines));
+          render();
+          showMessage("Favoritos atualizados", `Linha ${number} ${state.favoriteLines.includes(number) ? "adicionada aos" : "removida dos"} favoritos.`);
+        });
         main.querySelectorAll("[data-go]").forEach((button) => {
           button.addEventListener("click", () => navigate(button.dataset.go));
         });
@@ -1630,7 +1864,8 @@
           });
         });
         main.querySelector('[data-action="speak-trip"]')?.addEventListener("click", () => {
-          say("Você está na linha 305. Faltam quatro paradas para descer.");
+          const route = selectedRoute();
+          if (route) say(`Rota de demonstração, de ${route.from} até ${route.to}, utilizando as linhas ${route.lines.join(" e ")}. ${route.via} Não é um itinerário ao vivo.`);
         });
         main.querySelector('[data-action="save-travel"]')?.addEventListener("click", () => {
           localStorage.setItem("via-travel-needs", JSON.stringify(state.selectedNeeds));
@@ -1875,100 +2110,210 @@
 
       function processCommand(rawCommand) {
         const command = normalize(rawCommand);
-        state.command = rawCommand.trim();
+        state.command = String(rawCommand || "").trim();
         updateVoiceLog();
         if (!command) return unknownCommand();
 
-        if (command.includes("parar de ouvir") || command === "parar") {
-          stopListening("Comando de voz interrompido.");
-          confirmAction("Escuta interrompida.");
-          return;
+        const matches = (...words) => words.some((word) => command.includes(word));
+        if (matches("parar de ouvir", "desligar microfone", "encerrar escuta") || command === "parar") {
+          stopListening("Escuta interrompida.");
+          return confirmAction("Escuta interrompida.");
         }
-        if (command === "abrir mapa" || command === "mapa" || command === "ver mapa") {
-          navigate("map");
-          return confirmAction("Abrindo o mapa.");
+        if (matches("parar leitura", "parar de falar", "ficar em silencio", "silencio", "calar a voz")) {
+          window.speechSynthesis?.cancel();
+          return showMessage("Leitura interrompida", "Você pode solicitar uma nova leitura quando desejar.");
         }
-        if (command.includes("planejar viagem") || command === "nova viagem") {
-          navigate("planner");
-          return confirmAction("Abrindo o planejamento de viagem.");
+        if (matches("quais comandos", "lista de comandos", "mostrar comandos", "mostrar ajuda", "abrir ajuda", "o que posso dizer", "comandos disponiveis") || command === "ajuda") {
+          navigate("voiceHelp");
+          return confirmAction("Abrindo o guia de comandos. Toque nas frases para experimentá-las.");
         }
-        if (command.includes("minha localizacao") || command.includes("onde estou")) {
+        if (!matches("desativar alto contraste", "desligar alto contraste") && matches("ativar alto contraste", "ligar alto contraste", "aumentar contraste")) {
+          if (!state.prefs.highContrast) togglePreference("highContrast");
+          return confirmAction("Alto contraste ativado.");
+        }
+        if (matches("desativar alto contraste", "desligar alto contraste", "contraste normal")) {
+          if (state.prefs.highContrast) togglePreference("highContrast");
+          return confirmAction("Alto contraste desativado.");
+        }
+        if (matches("aumentar texto", "aumentar letra", "letra maior", "ampliar texto")) {
+          if (!state.prefs.largeText) togglePreference("largeText");
+          return confirmAction("Tamanho do texto aumentado.");
+        }
+        if (matches("diminuir texto", "diminuir letra", "texto normal", "letra normal")) {
+          if (state.prefs.largeText) togglePreference("largeText");
+          return confirmAction("Tamanho do texto restaurado.");
+        }
+        if (!matches("desativar leitura automatica", "desligar leitura automatica") && matches("ativar leitura automatica", "ligar leitura automatica")) {
+          if (!state.prefs.autoRead) togglePreference("autoRead");
+          return confirmAction("Leitura automática ativada.");
+        }
+        if (matches("desativar leitura automatica", "desligar leitura automatica")) {
+          if (state.prefs.autoRead) togglePreference("autoRead");
+          return confirmAction("Leitura automática desativada.");
+        }
+        if (matches("solicitar apoio", "preciso de ajuda para embarcar", "apoio no embarque", "ajuda no embarque", "pedir apoio")) {
+          navigate("wait");
+          return confirmAction("Abrindo a simulação de solicitação de apoio no embarque.");
+        }
+        if (matches("mais tempo para embarcar", "preciso de mais tempo")) {
+          if (!state.selectedNeeds.includes("more-time")) state.selectedNeeds.push("more-time");
+          navigate("waitConfirm");
+          return confirmAction("Mais tempo para embarcar marcado na simulação.");
+        }
+        if (matches("plataforma elevatoria", "ativar elevador do onibus")) {
+          if (!state.selectedNeeds.includes("lift")) state.selectedNeeds.push("lift");
+          navigate("waitConfirm");
+          return confirmAction("Plataforma elevatória selecionada na simulação. Nenhum pedido foi enviado.");
+        }
+        if (matches("minha localizacao", "onde estou", "ver localizacao")) {
           navigate("location");
-          requestLocation();
-          return;
+          return requestLocation();
         }
-        if (/linha\s+201/.test(command)) {
+        if (matches("abrir mapa", "ver mapa") || command === "mapa") {
+          navigate("map");
+          return confirmAction("Abrindo o mapa de demonstração.");
+        }
+        if (matches("mostrar todas as linhas", "mostrar linhas", "ver linhas", "buscar linhas", "consultar linhas", "catalogo de linhas", "todas as linhas")) {
+          navigate("lines");
+          return confirmAction("Abrindo o catálogo de 10 linhas.");
+        }
+        const lineMatch = command.match(/(?:abrir |ver |consultar |favoritar |salvar )?linha\s+(\d{3})\b/);
+        if (lineMatch) {
+          const number = lineMatch[1];
+          if (!LINES.some((line) => line.number === number)) return showMessage("Linha não cadastrada", `A linha ${number} não está entre as 10 linhas deste protótipo.`, true);
+          state.selectedLine = number;
+          if (matches("favoritar linha", "salvar linha")) {
+            if (!state.favoriteLines.includes(number)) state.favoriteLines.push(number);
+            localStorage.setItem("via-favorite-lines", JSON.stringify(state.favoriteLines));
+            navigate("favorites");
+            return confirmAction(`Linha ${number} adicionada aos favoritos.`);
+          }
           navigate("line201");
-          return confirmAction("Abrindo as informações simuladas da linha 201.");
+          return confirmAction(`Abrindo a linha ${number}. Informações demonstrativas.`);
         }
-        const route = command.match(/(?:rota|ir|destino)\s+(?:para|ate)\s+(.+)/);
-        if (route) {
-          state.destination = displayDestination(route[1]);
-          navigate("planner");
-          confirmRoute();
-          return confirmAction(`Destino preenchido: ${state.destination}.`);
+        if (matches("minhas linhas favoritas", "abrir favoritos", "ver favoritos", "linhas favoritas") || command === "favoritos") {
+          navigate("favorites");
+          return confirmAction("Abrindo linhas favoritas.");
         }
-        const origin = command.match(/^(?:preencher\s+)?origem(?:\s+e|\s+eh|\s+para)?\s+(.+)/);
-        if (origin) {
-          state.origin = displayDestination(origin[1]);
-          navigate("planner");
-          return confirmAction(`Origem preenchida: ${state.origin}.`);
+        if (matches("mostrar notificacoes", "ver notificacoes", "abrir notificacoes") || command === "notificacoes") {
+          navigate("notifications");
+          return confirmAction("Abrindo notificações demonstrativas.");
         }
-        const destination = command.match(/^(?:preencher\s+)?destino(?:\s+e|\s+eh|\s+para)?\s+(.+)/);
-        if (destination) {
-          state.destination = displayDestination(destination[1]);
-          navigate("planner");
-          return confirmAction(`Destino preenchido: ${state.destination}.`);
+        if (matches("historico de viagens", "ver historico", "abrir historico") || command === "historico") {
+          navigate("history");
+          return confirmAction("Abrindo histórico demonstrativo.");
         }
-        if (command.includes("minhas viagens")) {
+        if (matches("abrir acessibilidade", "configurar acessibilidade")) {
+          navigate("accessibility");
+          return confirmAction("Abrindo recursos de acessibilidade.");
+        }
+        if (matches("abrir configuracoes", "ver configuracoes", "ir para configuracoes") || command === "configuracoes") {
+          navigate("settings");
+          return confirmAction("Abrindo configurações.");
+        }
+        if (matches("abrir perfil", "meu perfil", "ver perfil") || command === "perfil") {
+          navigate("profile");
+          return confirmAction("Abrindo perfil.");
+        }
+        if (matches("minhas viagens", "abrir viagens", "ver viagens") || command === "viagens") {
           navigate("trips");
           return confirmAction("Abrindo minhas viagens.");
         }
-        if (command.includes("abrir configuracoes") || command === "configuracoes") {
-          navigate("settings");
-          return confirmAction("Abrindo as configurações de acessibilidade.");
+        if (matches("ler minha rota", "ler rota", "ouvir minha rota", "ler instrucoes", "repetir instrucoes", "repetir rota")) {
+          const route = selectedRoute();
+          if (!route) return showMessage("Selecione uma rota", "Primeiro escolha uma opção de trajeto.", true);
+          return say(`Trajeto simulado de ${route.from} para ${route.to}. Linhas ${route.lines.join(" e ")}. ${route.via} Tempo fictício: ${route.duration}.`);
         }
-        if (command === "voltar" || command.includes("tela anterior")) {
-          goBack();
-          return confirmAction("Voltando.");
+        if (matches("iniciar viagem", "ver detalhes da rota", "ver minha rota") && selectedRoute()) {
+          navigate("tripActive");
+          return confirmAction("Abrindo os detalhes da viagem demonstrativa.");
         }
-        if (command === "inicio" || command.includes("tela inicial")) {
-          navigate("home");
-          return confirmAction("Voltando ao início.");
+        const choice = command.match(/(?:ver |escolher |selecionar |abrir )?(?:opcao|rota|alternativa)\s+(\d{1,2}|um|uma|dois|duas|tres|quatro|cinco)\b/);
+        if (choice) {
+          const ordinals = { um: 1, uma: 1, dois: 2, duas: 2, tres: 3, quatro: 4, cinco: 5 };
+          const number = Number(choice[1]) || ordinals[choice[1]];
+          return selectRouteByNumber(number);
         }
-        if (command.includes("ler tela")) {
-          return readScreen();
+        if (matches("alterar origem", "mudar origem", "alterar destino", "mudar destino")) {
+          navigate("planner");
+          const targetId = matches("origem") ? "origin-input" : "destination-input";
+          document.querySelector(`#${targetId}`)?.focus();
+          return confirmAction("Edite o campo selecionado ou informe o novo valor por voz.");
         }
-        if (command.includes("proximo elemento")) {
-          return moveFocus(1);
+        const originAndDest = command.match(/(?:rota\s+)?(?:saindo|partindo|sair|indo)\s+(?:do|da|de)\s+(.+?)\s+(?:para|ate|ao|a)\s+(.+)/);
+        if (originAndDest) {
+          state.origin = canonicalPlace(originAndDest[1]);
+          state.destination = canonicalPlace(originAndDest[2]);
+          navigate("tripOptions");
+          return confirmAction(`Exibindo rotas de ${state.origin} para ${state.destination}.`);
         }
-        if (command.includes("elemento anterior")) {
-          return moveFocus(-1);
+        // "Rota do Shopping Catuaí para o Instituto".
+        const routeFromTo = command.match(/^(?:rota|trajeto|percurso)\s+(?:do|da|de)\s+(.+?)\s+(?:para|ate|ao|a)\s+(.+)/);
+        if (routeFromTo) {
+          state.origin = canonicalPlace(routeFromTo[1]);
+          state.destination = canonicalPlace(routeFromTo[2]);
+          navigate("tripOptions");
+          return confirmAction(`Exibindo opções de ${state.origin} para ${state.destination}.`);
         }
+        if (matches("rotas para o instituto", "rotas do instituto", "como chegar ao instituto", "ir para o instituto", "quero ir ao instituto") || command === "instituto roberto miranda") {
+          state.origin = "Minha localização";
+          state.destination = INSTITUTE;
+          navigate("tripOptions");
+          return confirmAction("Exibindo cinco sugestões com chegada ao Instituto Roberto Miranda.");
+        }
+        const routeTo = command.match(/^(?:rota|rotas|como chegar|quero ir|ir|me leve|levar|trajeto|caminho|percursos?)\s+(?:para|ate|ao|a|no|na|o)\s+(.+)/);
+        if (routeTo) {
+          state.destination = canonicalPlace(routeTo[1]);
+          navigate("tripOptions");
+          return confirmAction(`Exibindo opções cadastradas para ${state.destination}.`);
+        }
+        const origin = command.match(/^(?:preencher\s+)?origem(?:\s+e|\s+eh|\s+para)?\s+(.+)/);
+        if (origin) {
+          state.origin = canonicalPlace(origin[1]);
+          navigate("planner");
+          return confirmAction(`Origem definida como ${state.origin}.`);
+        }
+        const destination = command.match(/^(?:preencher\s+)?destino(?:\s+e|\s+eh|\s+para)?\s+(.+)/);
+        if (destination) {
+          state.destination = canonicalPlace(destination[1]);
+          navigate("planner");
+          return confirmAction(`Destino definido como ${state.destination}.`);
+        }
+        if (matches("buscar rotas", "ver rotas", "mostrar rotas", "encontrar rotas", "confirmar destino")) {
+          if (!state.destination) return showMessage("Defina um destino", "Diga, por exemplo, destino Instituto Roberto Miranda.", true);
+          navigate("tripOptions");
+          return confirmAction(`Exibindo as opções para ${state.destination}.`);
+        }
+        if (matches("planejar viagem", "nova viagem", "planejar rota", "abrir planejador") || command === "planejar") {
+          navigate("planner");
+          return confirmAction("Abrindo o planejamento de viagem.");
+        }
+        if (matches("ler tela", "ler esta tela", "ler pagina", "o que tem na tela")) return readScreen();
+        if (matches("proximo elemento", "proximo botao")) return moveFocus(1);
+        if (matches("elemento anterior", "botao anterior")) return moveFocus(-1);
         if (command === "selecionar" || command === "confirmar opcao") {
           const active = document.activeElement;
-          if (active && typeof active.click === "function") {
+          if (active && active !== document.body && typeof active.click === "function") {
             active.click();
             return confirmAction("Opção selecionada.");
           }
+          return showMessage("Nenhuma opção selecionada", "Foque um botão antes de dizer selecionar.", true);
+        }
+        if (command === "voltar" || matches("tela anterior", "voltar uma tela")) {
+          goBack();
+          return confirmAction("Voltando.");
+        }
+        if (command === "inicio" || matches("ir para inicio", "tela inicial", "voltar ao inicio")) {
+          navigate("home");
+          return confirmAction("Voltando ao início.");
         }
         unknownCommand();
       }
 
-      function displayDestination(value) {
-        const normalized = normalize(value);
-        if (normalized === "uel") return "UEL — Universidade Estadual de Londrina";
-        return value
-          .trim()
-          .split(" ")
-          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-          .join(" ");
-      }
-
-      function unknownCommand() {
+            function unknownCommand() {
         showMessage(
           "Comando não compreendido",
-          "Tente dizer “Abrir mapa”, “Planejar viagem”, “Linha 201” ou digite o comando em Configurações.",
+          "Exemplos: “Rotas para o Instituto”, “Linha 310”, “Origem UEL” ou “Ajuda”. Use o guia de comandos para ver todas as frases.",
           true,
         );
         if (state.prefs.autoRead) say("Não entendi o comando. Tente novamente.");
@@ -2031,6 +2376,8 @@
           showMessage("Destino necessário", "Informe ou fale um destino antes de continuar.", true);
           return;
         }
+        state.destination = canonicalPlace(state.destination);
+        state.origin = canonicalPlace(state.origin);
         navigate("tripOptions");
         showMessage(
           "Rotas simuladas",
@@ -2170,6 +2517,8 @@
       try {
         state.account = JSON.parse(localStorage.getItem("via-local-account") || "null");
         state.selectedNeeds = JSON.parse(localStorage.getItem("via-travel-needs") || "[]");
+        const favorites = JSON.parse(localStorage.getItem("via-favorite-lines") || "null");
+        if (Array.isArray(favorites)) state.favoriteLines = favorites.filter((item) => LINES.some((line) => line.number === item));
       } catch {
         state.account = null;
         state.selectedNeeds = [];
