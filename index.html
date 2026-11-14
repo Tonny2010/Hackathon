@@ -8,9 +8,9 @@
     />
     <meta
       name="description"
-      content="VIA — protótipo demonstrativo de mobilidade acessível com comandos de voz."
+      content="Via Nexus — protótipo demonstrativo de mobilidade acessível com comandos de voz."
     />
-    <title>VIA — Mobilidade Acessível</title>
+    <title>Via Nexus — Mobilidade Acessível</title>
     <style>
       :root {
         --blue: #1261e8;
@@ -318,6 +318,17 @@
           100px 125px;
         position: relative;
       }
+      .live-map { width:100%; height: min(58vh, 430px); min-height:300px; border:0; border-radius:18px; background:#e7eff8; display:block; }
+      .live-map[hidden] { display:none; }
+      .map-panel { padding:16px 16px 4px; }
+      .map-controls { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
+      .map-controls button { min-height:44px; flex:1 1 130px; border:1px solid var(--line); background:var(--soft); color:var(--ink); padding:9px 12px; border-radius:12px; font-weight:750; }
+      .map-controls button[aria-pressed="true"] { background:var(--navy); color:#fff; }
+      .map-link { display:inline-flex; padding:10px 0; color:var(--blue); font-weight:750; overflow-wrap:anywhere; }
+      .map-key-row { display:grid; gap:8px; margin:14px 0; }
+      .map-key-row input { width:100%; min-width:0; padding:12px; border:1px solid var(--line); border-radius:12px; background:var(--surface); color:var(--ink); }
+      .map-status { padding:10px 12px; background:var(--soft); border-radius:12px; color:var(--ink); font-size:.85rem; }
+      @media (max-width:375px) {.map-panel{padding:12px 12px 4px} .live-map{min-height:270px}}
       .map-label {
         position: absolute;
         padding: 7px 9px;
@@ -1090,8 +1101,8 @@
 
       const screens = {
         welcome: { title: "Boas-vindas", render: renderWelcome },
-        auth: { title: "Acessar o VIA", render: renderAuth },
-        email: { title: "Conta VIA", render: renderEmail },
+        auth: { title: "Acessar o Via Nexus", render: renderAuth },
+        email: { title: "Conta Via Nexus", render: renderEmail },
         recovery: { title: "Recuperar senha", render: renderRecovery },
         personalize: { title: "Personalização", render: renderPersonalize },
         home: { title: "Início", render: renderHome },
@@ -1122,6 +1133,17 @@
 
       // Endereços e denominações públicos; conexões, tempos e opções abaixo são cenários de teste.
       // A linha 310 e a parada do Instituto foram confirmadas pela própria instituição.
+      // Coordenadas fornecidas pelo usuário. O Instituto é procurado por endereço, sem inventar latitude/longitude.
+      const MAP_PLACES = {
+        londrina: { name: "Londrina (centro)", lat: -23.3045, lng: -51.1696 },
+        cathedral: { name: "Catedral de Londrina", lat: -23.3103, lng: -51.1628 },
+        institute: { name: "Instituto Roberto Miranda", address: "Rua Netuno, 90, Jardim do Sol, Londrina, PR, Brasil" },
+      };
+      let googleMap = null;
+      let googleMapMarkers = [];
+      let googleScriptPromise = null;
+      let mapSelectedPlace = "londrina";
+      let googleKey = "";
       const INSTITUTE = "Instituto Roberto Miranda";
       const INSTITUTE_ADDRESS = "Rua Netuno, 90 — Jardim do Sol, Londrina/PR";
       const LINES = [
@@ -1157,6 +1179,7 @@
       const VOICE_EXAMPLES = [
         { section: "Viagens e destinos", commands: ["Rotas para o Instituto Roberto Miranda", "Como chegar ao Instituto", "Rota saindo da UEL para o Instituto", "Rota do Shopping Catuaí para o Instituto", "Rota do Terminal Central para o Instituto", "Destino UEL", "Origem Terminal Oeste", "Buscar rotas", "Ver opção 2", "Iniciar viagem", "Ler minha rota"] },
         { section: "Linhas e mobilidade", commands: ["Mostrar todas as linhas", "Linha 310", "Linha 904", "Linha 351", "Favoritar linha 310", "Minhas linhas favoritas", "Solicitar apoio", "Preciso de mais tempo para embarcar", "Ativar plataforma elevatória", "Minha localização"] },
+        { section: "Mapa interativo", commands: ["Abrir mapa", "Mostrar Londrina no mapa", "Mostrar Catedral no mapa", "Mostrar Instituto Roberto Miranda no mapa", "Centralizar mapa", "Mapa do centro", "Abrir rota no Google Maps", "Ver mapa do instituto"] },
         { section: "Navegação e leitura", commands: ["Abrir mapa", "Planejar viagem", "Minhas viagens", "Abrir perfil", "Abrir configurações", "Abrir acessibilidade", "Mostrar notificações", "Histórico de viagens", "Ler tela", "Parar leitura", "Aumentar texto", "Diminuir texto", "Ativar alto contraste", "Desativar alto contraste", "Próximo elemento", "Elemento anterior", "Selecionar", "Voltar", "Início", "Ajuda", "Parar de ouvir"] },
       ];
 
@@ -1235,7 +1258,7 @@
 
       function renderWelcome() {
         return `<section class="welcome">
-          <div class="brand"><span class="brand-mark" aria-hidden="true"></span> VIA</div>
+          <div class="brand"><span class="brand-mark" aria-hidden="true"></span> Via Nexus</div>
           <div class="welcome-copy" data-readable>
             <p>Londrina em movimento</p>
             <h2>Mobilidade que entende você.</h2>
@@ -1247,7 +1270,7 @@
 
       function renderAuth() {
         return `<section class="access-shell">
-          <div class="brand"><span class="brand-mark" aria-hidden="true"></span> VIA</div>
+          <div class="brand"><span class="brand-mark" aria-hidden="true"></span> Via Nexus</div>
           <h2>Como você quer continuar?</h2>
           <p>Entre para manter localmente suas linhas, viagens e preferências nesta demonstração.</p>
           <div class="stack">
@@ -1264,7 +1287,7 @@
       function renderEmail() {
         const register = state.authMode === "register";
         return `<section class="access-shell">
-          <h2>${register ? "Crie sua conta VIA." : "Que bom ter você aqui."}</h2>
+          <h2>${register ? "Crie sua conta Via Nexus." : "Que bom ter você aqui."}</h2>
           <p>${register ? "Os dados serão salvos apenas neste navegador." : "Entre com a conta demonstrativa local."}</p>
           <form id="auth-form" class="stack">
             ${register ? `<label class="field">Nome<input id="auth-name" autocomplete="name" required value="${escapeHtml(state.account?.name || "")}" /></label>` : ""}
@@ -1329,7 +1352,7 @@
       function renderHome() {
         return `
           <section class="hero" data-readable>
-            <div class="brand"><span class="brand-mark" aria-hidden="true"></span> VIA</div>
+            <div class="brand"><span class="brand-mark" aria-hidden="true"></span> Via Nexus</div>
             <p class="eyebrow">Sua mobilidade, seu caminho.</p>
             <h2>Para onde você quer ir?</h2>
             <button class="search-button" data-go="planner">${icon("search")}<span>Buscar destino ou endereço</span><span aria-hidden="true">›</span></button>
@@ -1390,16 +1413,140 @@
         </section>`;
       }
 
-            function renderMap() {
-        return `<section class="map-demo" aria-label="Mapa demonstrativo da região central">
-          <span class="map-label one">${icon("bus")} Linha 201</span>
-          <span class="map-label two">${icon("bus")} Linha 108</span>
-          <span class="user-position" aria-label="Posição simulada do usuário" tabindex="0"></span>
-        </section>
-        <section class="content">
-          <div class="notice">Mapa e posições meramente demonstrativos. Use “Minha localização” para solicitar a localização do dispositivo.</div>
+      function osmEmbedSrc(place = mapSelectedPlace) {
+        const target = MAP_PLACES[place];
+        const lat = target?.lat ?? MAP_PLACES.londrina.lat;
+        const lng = target?.lng ?? MAP_PLACES.londrina.lng;
+        const bbox = [lng - .032, lat - .021, lng + .032, lat + .021].join(',');
+        return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(bbox)}&layer=mapnik&marker=${encodeURIComponent(lat + ',' + lng)}`;
+      }
+
+      function mapQuery(place = mapSelectedPlace) {
+        const found = MAP_PLACES[place] || MAP_PLACES.londrina;
+        return found.address || `${found.lat},${found.lng}`;
+      }
+
+      function mapExternalUrl(place = mapSelectedPlace) {
+        return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery(place))}`;
+      }
+
+      function renderMap() {
+        const storedKey = googleKey;
+        return `<section class="map-panel" aria-label="Mapa de Londrina">
+          <h2 class="section-title">Mapa de Londrina</h2>
+          <p class="notice">Pontos conhecidos no mapa: centro de Londrina e Catedral. O Instituto Roberto Miranda é localizado pelo endereço, sujeito à confirmação no serviço de mapas.</p>
+          <div class="map-controls" role="group" aria-label="Selecionar lugar no mapa">
+            <button data-map-place="londrina" aria-pressed="${mapSelectedPlace === 'londrina'}">Centro de Londrina</button>
+            <button data-map-place="cathedral" aria-pressed="${mapSelectedPlace === 'cathedral'}">Catedral</button>
+            <button data-map-place="institute" aria-pressed="${mapSelectedPlace === 'institute'}">Instituto Roberto Miranda</button>
+          </div>
+          <div id="google-map" class="live-map" role="region" aria-label="Mapa interativo do Google Maps" hidden></div>
+          <iframe id="osm-map" class="live-map" title="Mapa do OpenStreetMap em Londrina" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="${osmEmbedSrc()}" allowfullscreen></iframe>
+          <div id="map-status" class="map-status" role="status" aria-live="polite">${storedKey ? 'Iniciando Google Maps…' : 'Mapa do OpenStreetMap. Para usar o Google Maps integrado, insira sua chave da API abaixo.'}</div>
+          <a class="map-link" id="map-external-link" target="_blank" rel="noopener noreferrer" href="${mapExternalUrl()}">Abrir lugar selecionado no Google Maps</a>
+          <details ${storedKey ? '' : ''}>
+            <summary>Configurar Google Maps (opcional)</summary>
+            <p class="notice">Uma chave válida de Google Maps JavaScript API, com faturamento e restrições de domínio configurados no Google Cloud, é necessária. A chave fica só nesta aba e é usada diretamente pelo navegador.</p>
+            <form id="google-maps-form" class="map-key-row">
+              <label class="field">Chave pública da API Google Maps
+                <input id="google-maps-key" type="text" value="${escapeHtml(storedKey)}" placeholder="Cole sua chave de navegador" autocomplete="off" spellcheck="false" />
+              </label>
+              <button class="button" type="submit">Ativar Google Maps</button>
+              <button class="button secondary" type="button" id="clear-maps-key">Voltar ao mapa sem chave</button>
+            </form>
+          </details>
           <button class="button" style="width:100%;margin-top:12px" data-action="location">Minha localização</button>
+          <p class="notice" style="margin:14px 0">As rotas de ônibus exibidas no Via Nexus são simulações. Este mapa mostra lugares, não itinerários ou tempos de ônibus oficiais.</p>
         </section>`;
+      }
+
+      function setMapPlace(place) {
+        if (!(place in MAP_PLACES)) return;
+        mapSelectedPlace = place;
+        if (state.screen !== 'map') navigate('map');
+        else {
+          document.querySelectorAll('[data-map-place]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.mapPlace === place)));
+          const external = document.querySelector('#map-external-link');
+          if (external) external.href = mapExternalUrl(place);
+          updateMapDisplay();
+        }
+      }
+
+      function setMapStatus(message) {
+        const element = document.querySelector('#map-status');
+        if (element) element.textContent = message;
+      }
+
+      function showOpenStreetMap() {
+        const iframe = document.querySelector('#osm-map');
+        const googleElement = document.querySelector('#google-map');
+        if (iframe) {
+          iframe.hidden = false;
+          if (mapSelectedPlace === 'institute') {
+            // OSM não dispõe de geocodificação sem integração: não exibir localização aproximada como exata.
+            iframe.src = osmEmbedSrc('londrina');
+            setMapStatus('Instituto Roberto Miranda: abra o link Google Maps abaixo para localizar pelo endereço. O mapa de fundo permanece no centro de Londrina.');
+          } else {
+            iframe.src = osmEmbedSrc(mapSelectedPlace);
+            setMapStatus('Mapa interativo do OpenStreetMap. Selecione outro lugar ou ative Google Maps com uma chave.');
+          }
+        }
+        if (googleElement) googleElement.hidden = true;
+      }
+
+      function loadGoogleMaps(key) {
+        if (window.google?.maps) return Promise.resolve();
+        if (googleScriptPromise) return googleScriptPromise;
+        googleScriptPromise = new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.async = true;
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly`;
+          script.onload = () => window.google?.maps ? resolve() : reject(new Error('API não inicializou'));
+          script.onerror = () => reject(new Error('Não foi possível carregar a API do Google Maps'));
+          document.head.appendChild(script);
+        }).catch((error) => { googleScriptPromise = null; throw error; });
+        return googleScriptPromise;
+      }
+
+      async function updateMapDisplay() {
+        if (state.screen !== 'map') return;
+        if (!googleKey) return showOpenStreetMap();
+        const mapNode = document.querySelector('#google-map');
+        const osmNode = document.querySelector('#osm-map');
+        if (!mapNode) return;
+        setMapStatus('Carregando mapa…');
+        try {
+          await loadGoogleMaps(googleKey);
+          if (state.screen !== 'map' || document.querySelector('#google-map') !== mapNode) return;
+          mapNode.hidden = false;
+          if (osmNode) osmNode.hidden = true;
+          const center = MAP_PLACES[mapSelectedPlace];
+          googleMap = new google.maps.Map(mapNode, {
+            center: center?.lat ? { lat: center.lat, lng: center.lng } : { lat: -23.3045, lng: -51.1696 },
+            zoom: 13, mapTypeControl: false, streetViewControl: false, fullscreenControl: true,
+          });
+          googleMapMarkers = [];
+          for (const place of [MAP_PLACES.londrina, MAP_PLACES.cathedral]) {
+            const marker = new google.maps.Marker({ position: { lat: place.lat, lng: place.lng }, map: googleMap, title: place.name });
+            googleMapMarkers.push(marker);
+          }
+          if (mapSelectedPlace === 'institute') {
+            const geocoder = new google.maps.Geocoder();
+            geocoder.geocode({ address: MAP_PLACES.institute.address }, (results, status) => {
+              if (state.screen !== 'map' || document.querySelector('#google-map') !== mapNode) return;
+              if (status === 'OK' && results?.length) {
+                const position = results[0].geometry.location;
+                googleMap.setCenter(position);
+                googleMap.setZoom(16);
+                googleMapMarkers.push(new google.maps.Marker({ map: googleMap, position, title: MAP_PLACES.institute.name }));
+                setMapStatus('Instituto localizado pelo endereço informado. Confirme o ponto antes de viajar.');
+              } else setMapStatus('Não foi possível localizar o Instituto pela API. Use o link de busca logo abaixo.');
+            });
+          } else setMapStatus('Google Maps ativado. Marcadores: centro de Londrina e Catedral.');
+        } catch (error) {
+          showOpenStreetMap();
+          setMapStatus('Google Maps indisponível: ' + (error.message || 'verifique chave, API e domínio') + '. Usando OpenStreetMap.');
+        }
       }
 
       function renderPlanner() {
@@ -1605,7 +1752,7 @@
           </div>
           <div class="voice-log" id="voice-log">Nenhum comando reconhecido nesta sessão.</div>
           <p class="notice" style="margin-top:12px">Informações de referência: <a href="https://institutorobertomiranda.org.br/index.php/about/" target="_blank" rel="noopener noreferrer">Instituto Roberto Miranda</a> e <a href="https://cmtu.londrina.pr.gov.br/index.php/ult-noticias/2264-itinerario-de-quatro-linhas-do-transporte-coletivo-tera-mudancas-a-partir-de-segunda.html" target="_blank" rel="noopener noreferrer">CMTU</a>. Conexões e durações nesta interface são ilustrativas.</p>
-          <p class="notice" style="margin-top:12px">O áudio não é gravado pelo VIA. O mecanismo de reconhecimento do navegador pode usar serviços externos do fornecedor do navegador.</p>
+          <p class="notice" style="margin-top:12px">O áudio não é gravado pelo Via Nexus. O mecanismo de reconhecimento do navegador pode usar serviços externos do fornecedor do navegador.</p>
         </section>`;
       }
 
@@ -1745,9 +1892,28 @@
         });
         bindScreenEvents();
         applyPreferences();
+        if (state.screen === "map") updateMapDisplay();
       }
 
       function bindScreenEvents() {
+        main.querySelectorAll('[data-map-place]').forEach((button) => {
+          button.addEventListener('click', () => setMapPlace(button.dataset.mapPlace));
+        });
+        main.querySelector('#google-maps-form')?.addEventListener('submit', (event) => {
+          event.preventDefault();
+          const key = document.querySelector('#google-maps-key')?.value.trim() || '';
+          if (!key) return showMessage('Chave necessária', 'Informe sua chave de navegador para Google Maps.', true);
+          if (window.google?.maps && googleKey && key !== googleKey) {
+            return showMessage('Recarregue a página', 'A API já foi carregada com outra chave nesta aba. Recarregue a página para usar uma nova chave.', true);
+          }
+          googleKey = key;
+          updateMapDisplay();
+        });
+        main.querySelector('#clear-maps-key')?.addEventListener('click', () => {
+          googleKey = '';
+          googleMap = null;
+          render();
+        });
         main.querySelectorAll("[data-open-line]").forEach((button) => {
           button.addEventListener("click", () => {
             state.selectedLine = button.dataset.openLine;
@@ -1909,7 +2075,7 @@
             }
             state.account = {
               ...(state.account || {}),
-              name: name || state.account?.name || email.split("@")[0] || "Usuário VIA",
+              name: name || state.account?.name || email.split("@")[0] || "Usuário Via Nexus",
               email,
             };
             localStorage.setItem("via-local-account", JSON.stringify(state.account));
@@ -2020,7 +2186,7 @@
           startRecognition();
         } catch (error) {
           const messages = {
-            "secure-context": "Abra o VIA em HTTPS ou localhost para usar o microfone.",
+            "secure-context": "Abra o Via Nexus em HTTPS ou localhost para usar o microfone.",
             "media-unsupported": "Este navegador não oferece acesso compatível ao microfone.",
             "permission-denied":
               "A permissão foi recusada. Abra as configurações do site no navegador, habilite o microfone e tente novamente.",
@@ -2169,9 +2335,26 @@
           navigate("location");
           return requestLocation();
         }
+        if (matches('mostrar catedral no mapa', 'mapa da catedral', 'ver catedral', 'mostrar catedral')) {
+          setMapPlace('cathedral');
+          return confirmAction('Mostrando a Catedral de Londrina no mapa.');
+        }
+        if (matches('mostrar instituto roberto miranda no mapa', 'ver mapa do instituto', 'mapa do instituto', 'mostrar instituto no mapa')) {
+          setMapPlace('institute');
+          return confirmAction('Abrindo a localização do Instituto Roberto Miranda.');
+        }
+        if (matches('centralizar mapa', 'mostrar londrina no mapa', 'mapa do centro', 'ver centro no mapa')) {
+          setMapPlace('londrina');
+          return confirmAction('Mostrando o centro de Londrina no mapa.');
+        }
+        if (matches('abrir rota no google maps', 'abrir no google maps', 'ver no google maps')) {
+          // Abrir um mapa exige escolha explícita; não iniciar navegação sem confirmação.
+          navigate('map');
+          return confirmAction('Use o link Abrir lugar selecionado no Google Maps para continuar.');
+        }
         if (matches("abrir mapa", "ver mapa") || command === "mapa") {
           navigate("map");
-          return confirmAction("Abrindo o mapa de demonstração.");
+          return confirmAction("Abrindo o mapa de Londrina.");
         }
         if (matches("mostrar todas as linhas", "mostrar linhas", "ver linhas", "buscar linhas", "consultar linhas", "catalogo de linhas", "todas as linhas")) {
           navigate("lines");
