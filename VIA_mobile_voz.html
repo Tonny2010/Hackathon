@@ -1,0 +1,2185 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <meta
+      name="description"
+      content="VIA — protótipo demonstrativo de mobilidade acessível com comandos de voz."
+    />
+    <title>VIA — Mobilidade Acessível</title>
+    <style>
+      :root {
+        --blue: #1261e8;
+        --blue-dark: #073b98;
+        --navy: #09234f;
+        --mint: #087d69;
+        --orange: #d86d00;
+        --ink: #15233b;
+        --muted: #5f6d82;
+        --line: #dce3ed;
+        --soft: #f2f6fb;
+        --surface: #fff;
+        --page: #edf1f7;
+        --focus: #ffae32;
+        --text-scale: 1;
+        color-scheme: light;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: var(--ink);
+        background: var(--page);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        font-size: calc(16px * var(--text-scale));
+      }
+      body {
+        min-width: 320px;
+        min-height: 100vh;
+        min-height: 100dvh;
+        margin: 0;
+        background: var(--page);
+        overflow-x: hidden;
+        overscroll-behavior-x: none;
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+      }
+      html:has(.modal-backdrop:not([hidden])),
+      body:has(.modal-backdrop:not([hidden])) {
+        overflow: hidden;
+      }
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+      button {
+        cursor: pointer;
+        min-width: 44px;
+        min-height: 44px;
+        touch-action: manipulation;
+      }
+      button:focus-visible,
+      input:focus-visible,
+      select:focus-visible,
+      [tabindex]:focus-visible {
+        outline: 4px solid var(--focus);
+        outline-offset: 3px;
+      }
+      .skip-link {
+        position: fixed;
+        z-index: 1000;
+        top: 8px;
+        left: 8px;
+        padding: 10px 14px;
+        border-radius: 8px;
+        background: #000;
+        color: #fff;
+        transform: translateY(-160%);
+      }
+      .skip-link:focus {
+        transform: translateY(0);
+      }
+      .app {
+        width: min(100%, 520px);
+        min-height: 100vh;
+        min-height: 100dvh;
+        margin: 0 auto;
+        padding-bottom: calc(92px + env(safe-area-inset-bottom));
+        overflow-x: hidden;
+        background: var(--surface);
+        box-shadow: 0 0 45px rgb(18 39 71 / 10%);
+      }
+      .app.without-nav {
+        padding-bottom: 0;
+      }
+      .demo-banner {
+        padding: 7px 14px;
+        background: #fff4df;
+        color: #6f4300;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-align: center;
+      }
+      .header {
+        min-height: 70px;
+        padding: 12px 18px;
+        border-bottom: 1px solid var(--line);
+        background: var(--surface);
+        display: grid;
+        grid-template-columns: 44px 1fr 44px;
+        align-items: center;
+        gap: 8px;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 1.05rem;
+        text-align: center;
+      }
+      .icon-button {
+        width: 44px;
+        min-height: 44px;
+        border: 1px solid var(--line);
+        border-radius: 13px;
+        background: var(--soft);
+        color: var(--ink);
+        display: grid;
+        place-items: center;
+      }
+      .icon {
+        width: 22px;
+        height: 22px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .hero {
+        padding: 23px 20px 34px;
+        border-radius: 0 0 32px 32px;
+        background: linear-gradient(140deg, var(--blue), var(--blue-dark));
+        color: #fff;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        font-size: 1.45rem;
+        font-weight: 900;
+        letter-spacing: -0.05em;
+      }
+      .brand-mark {
+        width: 29px;
+        height: 29px;
+        border: 7px solid currentColor;
+        border-top-width: 3px;
+        border-bottom-width: 3px;
+        transform: rotate(45deg);
+      }
+      .hero .eyebrow {
+        margin: 30px 0 5px;
+        color: #c8d9ff;
+        font-size: 0.82rem;
+      }
+      .hero h2 {
+        margin: 0 0 20px;
+        font-size: clamp(2rem, 9vw, 2.65rem);
+        line-height: 1.08;
+        letter-spacing: -0.045em;
+      }
+      .search-button,
+      .voice-card {
+        width: 100%;
+        min-height: 58px;
+        border-radius: 16px;
+        display: grid;
+        grid-template-columns: 32px 1fr 22px;
+        align-items: center;
+        gap: 9px;
+        text-align: left;
+      }
+      .search-button {
+        border: 0;
+        padding: 0 16px;
+        background: #fff;
+        color: var(--ink);
+        box-shadow: 0 12px 28px rgb(0 20 60 / 18%);
+      }
+      .voice-card {
+        margin-top: 11px;
+        padding: 8px 12px;
+        border: 1px solid rgb(255 255 255 / 35%);
+        background: rgb(2 37 102 / 38%);
+        color: #fff;
+      }
+      .voice-card.listening {
+        border: 2px solid #6ce3c6;
+        background: #062f78;
+      }
+      .voice-card strong,
+      .voice-card small {
+        display: block;
+      }
+      .voice-card small {
+        margin-top: 3px;
+        color: #d2e0ff;
+        font-size: 0.72rem;
+      }
+      .content {
+        padding: 18px;
+      }
+      .section-title {
+        margin: 0 0 12px;
+        font-size: 1.08rem;
+      }
+      .card,
+      .route-card,
+      .setting-group {
+        margin-bottom: 12px;
+        border: 1px solid var(--line);
+        border-radius: 17px;
+        background: var(--surface);
+      }
+      .card {
+        padding: 15px;
+      }
+      .card h3,
+      .card p {
+        margin: 0;
+      }
+      .card p {
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 0.82rem;
+        line-height: 1.5;
+      }
+      .quick-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .quick-button {
+        min-height: 96px;
+        padding: 14px;
+        border: 0;
+        border-radius: 17px;
+        background: var(--soft);
+        color: var(--ink);
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: space-between;
+        text-align: left;
+        font-weight: 800;
+      }
+      .quick-button.primary {
+        background: var(--navy);
+        color: #fff;
+      }
+      .line-list {
+        display: grid;
+      }
+      .line-button {
+        width: 100%;
+        min-height: 72px;
+        padding: 10px 2px;
+        border: 0;
+        border-bottom: 1px solid var(--line);
+        background: var(--surface);
+        color: var(--ink);
+        display: grid;
+        grid-template-columns: 52px 1fr auto;
+        align-items: center;
+        gap: 10px;
+        text-align: left;
+      }
+      .line-number {
+        min-width: 46px;
+        padding: 8px 6px;
+        border-radius: 9px;
+        background: var(--blue);
+        color: #fff;
+        font-weight: 900;
+        text-align: center;
+      }
+      .line-button strong,
+      .line-button small {
+        display: block;
+      }
+      .line-button small {
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 0.72rem;
+      }
+      .arrival {
+        padding: 6px;
+        border: 2px solid var(--orange);
+        border-radius: 9px;
+        color: var(--orange);
+        font-weight: 900;
+        white-space: nowrap;
+      }
+      .map-demo {
+        min-height: 370px;
+        padding: 20px;
+        overflow: hidden;
+        background:
+          linear-gradient(31deg, transparent 45%, #fff 46% 52%, transparent 53%),
+          linear-gradient(92deg, transparent 45%, #fff 46% 52%, transparent 53%),
+          #e6ece3;
+        background-size:
+          120px 90px,
+          100px 125px;
+        position: relative;
+      }
+      .map-label {
+        position: absolute;
+        padding: 7px 9px;
+        border-radius: 9px;
+        background: var(--navy);
+        color: #fff;
+        font-size: 0.74rem;
+        font-weight: 800;
+      }
+      .map-label.one {
+        top: 28%;
+        left: 18%;
+      }
+      .map-label.two {
+        right: 15%;
+        bottom: 25%;
+        background: var(--mint);
+      }
+      .user-position {
+        position: absolute;
+        top: 48%;
+        left: 48%;
+        width: 22px;
+        height: 22px;
+        border: 4px solid #fff;
+        border-radius: 50%;
+        background: var(--blue);
+        box-shadow: 0 0 0 9px rgb(18 97 232 / 20%);
+      }
+      .field {
+        display: grid;
+        gap: 6px;
+        margin-bottom: 14px;
+        color: var(--muted);
+        font-size: 0.8rem;
+        font-weight: 800;
+      }
+      .field input,
+      .field select,
+      .command-input {
+        width: 100%;
+        min-height: 52px;
+        padding: 0 14px;
+        border: 1px solid #cdd6e2;
+        border-radius: 13px;
+        background: var(--surface);
+        color: var(--ink);
+      }
+      .button {
+        min-height: 52px;
+        padding: 0 17px;
+        border: 0;
+        border-radius: 14px;
+        background: var(--blue);
+        color: #fff;
+        font-weight: 850;
+      }
+      .button.secondary {
+        border: 1px solid var(--line);
+        background: var(--surface);
+        color: var(--blue);
+      }
+      .route-card {
+        padding: 15px;
+      }
+      .route-card.recommended {
+        border: 2px solid var(--blue);
+      }
+      .route-card h3 {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: 0 0 12px;
+      }
+      .steps {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+      .steps b {
+        padding: 6px 9px;
+        border-radius: 7px;
+        background: var(--blue);
+        color: #fff;
+      }
+      .setting-group {
+        overflow: hidden;
+      }
+      .setting-group h3 {
+        margin: 0;
+        padding: 13px;
+        background: var(--soft);
+        font-size: 0.9rem;
+      }
+      .setting {
+        min-height: 65px;
+        padding: 10px 13px;
+        border-bottom: 1px solid var(--line);
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        gap: 10px;
+      }
+      .setting:last-child {
+        border-bottom: 0;
+      }
+      .setting strong,
+      .setting small {
+        display: block;
+      }
+      .setting small {
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 0.72rem;
+      }
+      .toggle {
+        width: 50px;
+        height: 30px;
+        padding: 3px;
+        border: 0;
+        border-radius: 20px;
+        background: #aeb9c8;
+      }
+      .toggle span {
+        display: block;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #fff;
+        transition: transform 0.18s;
+      }
+      .toggle[aria-pressed="true"] {
+        background: var(--blue);
+      }
+      .toggle[aria-pressed="true"] span {
+        transform: translateX(20px);
+      }
+      .bottom-nav {
+        position: fixed;
+        z-index: 30;
+        bottom: 0;
+        left: 50%;
+        width: min(100%, 520px);
+        min-height: 76px;
+        padding-bottom: env(safe-area-inset-bottom);
+        border-top: 1px solid var(--line);
+        background: rgb(255 255 255 / 96%);
+        transform: translateX(-50%);
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+      }
+      .bottom-nav button {
+        border: 0;
+        background: transparent;
+        color: var(--muted);
+        display: grid;
+        place-items: center;
+        gap: 2px;
+        font-size: 0.7rem;
+        font-weight: 800;
+        min-width: 0;
+        min-height: 48px;
+      }
+      .bottom-nav button.active {
+        color: var(--blue);
+      }
+      .mic-fab {
+        position: fixed;
+        z-index: 50;
+        right: max(14px, calc((100vw - 520px) / 2 + 14px));
+        bottom: calc(88px + env(safe-area-inset-bottom));
+        min-height: 48px;
+        padding: 6px 12px 6px 7px;
+        border: 2px solid #fff;
+        border-radius: 15px;
+        background: var(--navy);
+        color: #fff;
+        box-shadow: 0 9px 25px rgb(0 20 50 / 28%);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 850;
+      }
+      .mic-fab.listening {
+        border-color: #6ce3c6;
+        background: var(--blue);
+      }
+      .mic-circle {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: #fff;
+        color: var(--blue);
+        display: grid;
+        place-items: center;
+      }
+      .listening-panel,
+      .message-panel {
+        position: fixed;
+        z-index: 45;
+        left: 50%;
+        width: min(calc(100% - 28px), 492px);
+        padding: 11px 14px;
+        border-radius: 15px;
+        transform: translateX(-50%);
+        box-shadow: 0 10px 30px rgb(0 20 50 / 30%);
+      }
+      .listening-panel {
+        bottom: calc(145px + env(safe-area-inset-bottom));
+        border: 2px solid #6ce3c6;
+        background: #071d43;
+        color: #fff;
+      }
+      .message-panel {
+        bottom: calc(205px + env(safe-area-inset-bottom));
+        border: 2px solid var(--blue);
+        background: var(--surface);
+        color: var(--ink);
+      }
+      .listening-panel strong,
+      .listening-panel small,
+      .message-panel strong,
+      .message-panel small {
+        display: block;
+      }
+      .listening-panel small,
+      .message-panel small {
+        margin-top: 3px;
+        font-size: 0.76rem;
+      }
+      .voice-log {
+        margin-top: 12px;
+        padding: 11px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--soft);
+        font-size: 0.8rem;
+        line-height: 1.5;
+      }
+      .fallback {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        margin-top: 10px;
+      }
+      .fallback .button {
+        min-width: 96px;
+      }
+      .notice {
+        padding: 11px;
+        border-radius: 12px;
+        background: #eef9f6;
+        color: #155f52;
+        font-size: 0.78rem;
+        line-height: 1.5;
+      }
+      .error {
+        background: #fff1f1;
+        color: #8c2020;
+      }
+      .welcome {
+        min-height: calc(100dvh - 34px);
+        padding: max(34px, env(safe-area-inset-top)) 24px
+          max(28px, env(safe-area-inset-bottom));
+        background: linear-gradient(145deg, #1055dd 0%, #07399d 64%, #052d77 100%);
+        color: #fff;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        overflow: hidden;
+        position: relative;
+      }
+      .welcome::before,
+      .welcome::after {
+        content: "";
+        position: absolute;
+        width: 330px;
+        height: 330px;
+        border: 60px solid rgb(105 157 255 / 18%);
+        border-radius: 50%;
+      }
+      .welcome::before {
+        top: -220px;
+        right: -210px;
+      }
+      .welcome::after {
+        bottom: -260px;
+        left: -240px;
+      }
+      .welcome-copy,
+      .welcome > button {
+        position: relative;
+        z-index: 1;
+      }
+      .welcome-copy h2 {
+        margin: 42px 0 18px;
+        font-size: clamp(2.5rem, 11vw, 3.4rem);
+        line-height: 1;
+        letter-spacing: -0.055em;
+      }
+      .welcome-copy p {
+        max-width: 330px;
+        color: #c7d8fa;
+        line-height: 1.6;
+      }
+      .welcome .button {
+        background: #fff;
+        color: var(--blue-dark);
+      }
+      .access-shell {
+        padding: 26px 22px 110px;
+      }
+      .access-shell > h2 {
+        margin: 14px 0 9px;
+        font-size: clamp(1.8rem, 8vw, 2.25rem);
+        letter-spacing: -0.04em;
+      }
+      .access-shell > p {
+        margin: 0 0 24px;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+      .stack {
+        display: grid;
+        gap: 10px;
+      }
+      .social-button,
+      .menu-button {
+        width: 100%;
+        min-height: 56px;
+        padding: 10px 14px;
+        border: 1px solid var(--line);
+        border-radius: 15px;
+        background: var(--surface);
+        color: var(--ink);
+        text-align: left;
+        display: grid;
+        grid-template-columns: 34px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 10px;
+        font-weight: 800;
+      }
+      .text-button {
+        width: 100%;
+        border: 0;
+        background: transparent;
+        color: var(--blue);
+        font-weight: 800;
+      }
+      .form-note {
+        color: var(--muted);
+        font-size: 0.78rem;
+        line-height: 1.5;
+        text-align: center;
+      }
+      .account-card {
+        padding: 18px;
+        border-radius: 18px;
+        background: linear-gradient(140deg, var(--blue), var(--blue-dark));
+        color: #fff;
+      }
+      .account-card h2,
+      .account-card p {
+        margin: 0;
+      }
+      .account-card p {
+        margin-top: 5px;
+        color: #d5e2ff;
+      }
+      .check-list {
+        display: grid;
+        gap: 8px;
+      }
+      .check-option {
+        width: 100%;
+        min-height: 58px;
+        padding: 11px 12px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--surface);
+        color: var(--ink);
+        display: grid;
+        grid-template-columns: 24px minmax(0, 1fr);
+        gap: 10px;
+        align-items: center;
+        text-align: left;
+      }
+      .check-option[aria-pressed="true"] {
+        border: 2px solid var(--blue);
+        background: var(--soft);
+      }
+      .status-hero {
+        padding: 24px 18px;
+        text-align: center;
+      }
+      .status-hero h2 {
+        margin: 8px 0;
+      }
+      .timeline {
+        display: grid;
+        gap: 10px;
+      }
+      .timeline .card {
+        display: grid;
+        grid-template-columns: 32px minmax(0, 1fr);
+        align-items: center;
+        gap: 10px;
+      }
+      .progress {
+        height: 7px;
+        overflow: hidden;
+        border-radius: 10px;
+        background: var(--line);
+      }
+      .progress span {
+        display: block;
+        width: 38%;
+        height: 100%;
+        background: var(--blue);
+      }
+      .modal-backdrop {
+        position: fixed;
+        z-index: 200;
+        inset: 0;
+        padding: 20px;
+        background: rgb(4 16 38 / 76%);
+        backdrop-filter: blur(5px);
+        display: grid;
+        place-items: center;
+        overscroll-behavior: contain;
+      }
+      .modal {
+        width: min(100%, 450px);
+        max-height: calc(100vh - 40px);
+        max-height: calc(100dvh - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+        padding: 22px;
+        overflow-y: auto;
+        border-radius: 23px;
+        background: var(--surface);
+        color: var(--ink);
+      }
+      .modal h2 {
+        margin: 0 0 8px;
+      }
+      .modal > p {
+        margin: 0 0 16px;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+      .need-option {
+        width: 100%;
+        min-height: 58px;
+        margin-bottom: 8px;
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 13px;
+        background: var(--surface);
+        color: var(--ink);
+        display: grid;
+        grid-template-columns: 24px 1fr;
+        align-items: center;
+        gap: 9px;
+        text-align: left;
+      }
+      .need-option[aria-pressed="true"] {
+        border: 2px solid var(--blue);
+        background: var(--soft);
+      }
+      .check {
+        width: 21px;
+        height: 21px;
+        border: 1px solid #aeb8c6;
+        border-radius: 6px;
+        display: grid;
+        place-items: center;
+      }
+      .need-option[aria-pressed="true"] .check {
+        background: var(--blue);
+        color: #fff;
+      }
+      .modal-actions {
+        display: grid;
+        grid-template-columns: 1fr 1.4fr;
+        gap: 9px;
+        margin-top: 15px;
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      body.high-contrast {
+        --blue: #ffe500;
+        --blue-dark: #000;
+        --navy: #000;
+        --ink: #fff;
+        --muted: #fff;
+        --line: #fff;
+        --soft: #111;
+        --surface: #000;
+        --page: #000;
+        color-scheme: dark;
+      }
+      body.high-contrast .hero {
+        background: #000;
+        border-bottom: 3px solid #fff;
+      }
+      body.high-contrast button,
+      body.high-contrast input,
+      body.high-contrast select {
+        border-color: #fff;
+      }
+      body.large-targets button,
+      body.large-targets input,
+      body.large-targets select {
+        min-height: 50px;
+      }
+      body.visual-alerts .arrival,
+      body.visual-alerts .listening-panel {
+        animation: pulse 1s ease-in-out infinite alternate;
+      }
+      @keyframes pulse {
+        to {
+          box-shadow: 0 0 0 6px rgb(255 174 50 / 30%);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+      @media (max-width: 390px) {
+        .mic-fab strong {
+          display: none;
+        }
+        .fallback {
+          grid-template-columns: 1fr;
+        }
+        .quick-grid {
+          grid-template-columns: 1fr;
+        }
+        .line-button {
+          grid-template-columns: 46px minmax(0, 1fr) auto;
+          gap: 7px;
+        }
+        .line-button strong,
+        .line-button small {
+          overflow-wrap: anywhere;
+        }
+        .modal-backdrop {
+          padding:
+            max(12px, env(safe-area-inset-top))
+            12px
+            max(12px, env(safe-area-inset-bottom));
+        }
+      }
+    /* Mobile refinements */
+@media(max-width:520px){.app{width:100%;box-shadow:none}.content{padding:16px}.hero{padding:22px 16px 28px}.header{padding:10px 14px}input,select,textarea{font-size:16px!important}button{touch-action:manipulation} .bottom-nav{padding-bottom:env(safe-area-inset-bottom)}}
+@media(max-width:360px){.hero h2{font-size:1.9rem}.content{padding:12px}.header{gap:4px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+</style>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Pular para o conteúdo</a>
+    <div class="app" id="app">
+      <div class="demo-banner">
+        Protótipo demonstrativo — linhas, horários, mapas e trajetos são simulados.
+      </div>
+      <header class="header">
+        <button class="icon-button" id="back-button" aria-label="Voltar" hidden>
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m15 18-6-6 6-6"></path>
+          </svg>
+        </button>
+        <h1 id="screen-title">Início</h1>
+        <span></span>
+      </header>
+
+      <main id="main-content" tabindex="-1"></main>
+
+      <nav class="bottom-nav" aria-label="Navegação principal">
+        <button data-screen="home" class="active">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m3 11 9-8 9 8"></path>
+            <path d="M5 10v10h14V10"></path>
+          </svg>
+          <span>Início</span>
+        </button>
+        <button data-screen="map">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m3 6 5-3 8 3 5-3v15l-5 3-8-3-5 3Z"></path>
+            <path d="M8 3v15M16 6v15"></path>
+          </svg>
+          <span>Mapa</span>
+        </button>
+        <button data-screen="trips">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="4" y="3" width="16" height="16" rx="3"></rect>
+            <path d="M4 11h16M8 7h8"></path>
+          </svg>
+          <span>Viagens</span>
+        </button>
+        <button data-screen="profile">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M12 2v3m0 14v3M2 12h3m14 0h3"></path>
+          </svg>
+          <span>Perfil</span>
+        </button>
+      </nav>
+    </div>
+
+    <button class="mic-fab" id="microphone-button" aria-pressed="false">
+      <span class="mic-circle">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="9" y="3" width="6" height="11" rx="3"></rect>
+          <path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8"></path>
+        </svg>
+      </span>
+      <strong>Comando de voz</strong>
+    </button>
+
+    <div class="listening-panel" id="listening-panel" role="status" hidden>
+      <strong>Microfone ativado. Estou ouvindo</strong>
+      <small>Diga um comando. Toque novamente no microfone para interromper.</small>
+    </div>
+    <div class="message-panel" id="message-panel" role="status" aria-live="polite" hidden>
+      <strong id="message-title"></strong>
+      <small id="message-text"></small>
+    </div>
+    <div class="sr-only" id="live-region" role="status" aria-live="assertive"></div>
+
+    <div class="modal-backdrop" id="onboarding" hidden>
+      <section
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="onboarding-title"
+      >
+        <h2 id="onboarding-title">Como podemos facilitar o uso do aplicativo?</h2>
+        <p>
+          Esta etapa é opcional. Selecione quantos recursos desejar. Você poderá alterá-los depois.
+        </p>
+        <button class="need-option" data-pref="autoRead" aria-pressed="false">
+          <span class="check" aria-hidden="true"></span>
+          <span><strong>Suporte por áudio</strong><br /><small>Leitura automática e comandos de voz</small></span>
+        </button>
+        <button class="need-option" data-pref="highContrast" aria-pressed="false">
+          <span class="check" aria-hidden="true"></span>
+          <span><strong>Alto contraste</strong><br /><small>Fundos e elementos mais distintos</small></span>
+        </button>
+        <button class="need-option" data-pref="largeText" aria-pressed="false">
+          <span class="check" aria-hidden="true"></span>
+          <span><strong>Textos maiores</strong><br /><small>Melhora a leitura em todas as telas</small></span>
+        </button>
+        <button class="need-option" data-pref="visualAlerts" aria-pressed="false">
+          <span class="check" aria-hidden="true"></span>
+          <span><strong>Avisos visuais</strong><br /><small>Não depende somente de sons</small></span>
+        </button>
+        <button class="need-option" data-pref="largeTargets" aria-pressed="false">
+          <span class="check" aria-hidden="true"></span>
+          <span><strong>Botões e áreas de toque maiores</strong><br /><small>Controles mais fáceis de selecionar</small></span>
+        </button>
+        <div class="modal-actions">
+          <button class="button secondary" id="skip-onboarding">Pular</button>
+          <button class="button" id="save-onboarding">Aplicar recursos</button>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      "use strict";
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const state = {
+        screen: "welcome",
+        history: [],
+        listening: false,
+        recognition: null,
+        permissionGranted: false,
+        command: "",
+        origin: "Minha localização",
+        destination: "",
+        authMode: "login",
+        account: null,
+        selectedNeeds: [],
+        selectedLine: "201",
+        speechRate: 1,
+        prefs: {
+          voiceCommands: true,
+          autoRead: false,
+          highContrast: false,
+          largeText: false,
+          visualAlerts: false,
+          vibration: true,
+          largeTargets: false,
+        },
+      };
+
+      const screens = {
+        welcome: { title: "Boas-vindas", render: renderWelcome },
+        auth: { title: "Acessar o VIA", render: renderAuth },
+        email: { title: "Conta VIA", render: renderEmail },
+        recovery: { title: "Recuperar senha", render: renderRecovery },
+        personalize: { title: "Personalização", render: renderPersonalize },
+        home: { title: "Início", render: renderHome },
+        map: { title: "Mapa", render: renderMap },
+        planner: { title: "Planejar viagem", render: renderPlanner },
+        tripOptions: { title: "Opções de trajeto", render: renderTripOptions },
+        tripActive: { title: "Viagem em andamento", render: renderTripActive },
+        location: { title: "Minha localização", render: renderLocation },
+        line201: { title: "Linha 201", render: renderLine },
+        wait: { title: "Apoio no embarque", render: renderWait },
+        waitConfirm: { title: "Confirmar apoio", render: renderWaitConfirm },
+        requestStatus: { title: "Status da solicitação", render: renderRequestStatus },
+        trips: { title: "Minhas viagens", render: renderTrips },
+        profile: { title: "Perfil", render: renderProfile },
+        settings: { title: "Configurações", render: renderSettings },
+        accessibility: { title: "Acessibilidade no app", render: renderAccessibility },
+        travelAccessibility: {
+          title: "Acessibilidade na viagem",
+          render: renderTravelAccessibility,
+        },
+        favorites: { title: "Linhas favoritas", render: renderFavorites },
+        history: { title: "Histórico de viagens", render: renderHistory },
+        notifications: { title: "Notificações", render: renderNotifications },
+        account: { title: "Dados da conta", render: renderAccount },
+      };
+
+      const main = document.querySelector("#main-content");
+      const title = document.querySelector("#screen-title");
+      const backButton = document.querySelector("#back-button");
+      const micButton = document.querySelector("#microphone-button");
+      const listeningPanel = document.querySelector("#listening-panel");
+      const messagePanel = document.querySelector("#message-panel");
+      const messageTitle = document.querySelector("#message-title");
+      const messageText = document.querySelector("#message-text");
+      const liveRegion = document.querySelector("#live-region");
+      const onboarding = document.querySelector("#onboarding");
+      const appHeader = document.querySelector(".header");
+      const bottomNav = document.querySelector(".bottom-nav");
+
+      function renderWelcome() {
+        return `<section class="welcome">
+          <div class="brand"><span class="brand-mark" aria-hidden="true"></span> VIA</div>
+          <div class="welcome-copy" data-readable>
+            <p>Londrina em movimento</p>
+            <h2>Mobilidade que entende você.</h2>
+            <p>Seu caminho pela cidade, mais simples, seguro e acessível.</p>
+          </div>
+          <button class="button" data-go="auth">Começar <span aria-hidden="true">→</span></button>
+        </section>`;
+      }
+
+      function renderAuth() {
+        return `<section class="access-shell">
+          <div class="brand"><span class="brand-mark" aria-hidden="true"></span> VIA</div>
+          <h2>Como você quer continuar?</h2>
+          <p>Entre para manter localmente suas linhas, viagens e preferências nesta demonstração.</p>
+          <div class="stack">
+            <button class="social-button" data-action="social-demo"><span>G</span><span>Entrar com Google</span><span>›</span></button>
+            <button class="social-button" data-action="social-demo"><span>●</span><span>Entrar com Apple</span><span>›</span></button>
+            <button class="social-button" data-action="login"><span>${icon("settings")}</span><span>Entrar com e-mail</span><span>›</span></button>
+            <button class="button" data-action="register">Criar conta</button>
+            <button class="text-button" data-go="personalize">Continuar sem conta</button>
+          </div>
+          <p class="notice" style="margin-top:20px">Versão standalone: contas ficam somente neste navegador e não acessam o Payload.</p>
+        </section>`;
+      }
+
+      function renderEmail() {
+        const register = state.authMode === "register";
+        return `<section class="access-shell">
+          <h2>${register ? "Crie sua conta VIA." : "Que bom ter você aqui."}</h2>
+          <p>${register ? "Os dados serão salvos apenas neste navegador." : "Entre com a conta demonstrativa local."}</p>
+          <form id="auth-form" class="stack">
+            ${register ? `<label class="field">Nome<input id="auth-name" autocomplete="name" required value="${escapeHtml(state.account?.name || "")}" /></label>` : ""}
+            <label class="field">E-mail<input id="auth-email" type="email" inputmode="email" autocomplete="email" required value="${escapeHtml(state.account?.email || "")}" /></label>
+            <label class="field">Senha<input id="auth-password" type="password" minlength="8" autocomplete="${register ? "new-password" : "current-password"}" required /></label>
+            <button class="button" type="submit">${register ? "Criar conta e personalizar" : "Entrar"}</button>
+          </form>
+          ${register ? "" : `<button class="text-button" style="margin-top:10px" data-go="recovery">Esqueci minha senha</button>`}
+          <button class="text-button" style="margin-top:10px" data-action="switch-auth">${register ? "Já tenho uma conta" : "Quero criar uma conta"}</button>
+          <p class="form-note">Não use senhas reais. Este arquivo é uma demonstração local.</p>
+        </section>`;
+      }
+
+      function renderRecovery() {
+        return `<section class="access-shell">
+          <h2>Recupere o acesso local.</h2>
+          <p>Informe o e-mail cadastrado neste navegador. Nenhuma mensagem será enviada.</p>
+          <form id="recovery-form" class="stack">
+            <label class="field">E-mail<input id="recovery-email" type="email" inputmode="email" required /></label>
+            <button class="button" type="submit">Continuar</button>
+          </form>
+          <p class="notice" style="margin-top:16px">Na versão standalone, a recuperação redefine apenas a conta demonstrativa local.</p>
+        </section>`;
+      }
+
+      function renderPersonalize() {
+        return `<section class="access-shell">
+          <p class="eyebrow">ETAPA OPCIONAL</p>
+          <h2>Como podemos facilitar o uso do aplicativo?</h2>
+          <p>Selecione quantos recursos desejar. Tudo pode ser alterado depois.</p>
+          <div class="check-list">
+            ${personalizeOption("autoRead", "Suporte por áudio", "Leitura automática e confirmações faladas")}
+            ${personalizeOption("highContrast", "Alto contraste", "Fundos e elementos mais distintos")}
+            ${personalizeOption("largeText", "Textos maiores", "Amplia os textos em todas as telas")}
+            ${personalizeOption("visualAlerts", "Avisos visuais", "Não depende somente de sons")}
+            ${personalizeOption("largeTargets", "Áreas de toque maiores", "Controles mais fáceis de selecionar")}
+          </div>
+          <button class="button" style="width:100%;margin-top:18px" data-action="finish-personalize">Salvar e continuar</button>
+          <button class="text-button" style="margin-top:8px" data-go="home">Pular por enquanto</button>
+        </section>`;
+      }
+
+      function personalizeOption(key, label, detail) {
+        return `<button class="check-option" data-pref-screen="${key}" aria-pressed="${state.prefs[key]}">
+          <span class="check">${state.prefs[key] ? "✓" : ""}</span>
+          <span><strong>${label}</strong><br><small>${detail}</small></span>
+        </button>`;
+      }
+
+      function icon(name) {
+        const paths = {
+          search: '<circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path>',
+          mic: '<rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8"></path>',
+          pin: '<path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"></path><circle cx="12" cy="10" r="2.5"></circle>',
+          bus: '<rect x="4" y="3" width="16" height="16" rx="3"></rect><path d="M4 11h16M8 7h8M7 19v2m10-2v2"></path>',
+          route: '<circle cx="6" cy="18" r="2"></circle><circle cx="18" cy="6" r="2"></circle><path d="M8 18h3a3 3 0 0 0 0-6h2a3 3 0 0 0 3-3V8"></path>',
+          settings: '<circle cx="12" cy="12" r="3"></circle><path d="M12 2v3m0 14v3M2 12h3m14 0h3"></path>',
+        };
+        return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${paths[name] || paths.route}</svg>`;
+      }
+
+      function renderHome() {
+        return `
+          <section class="hero" data-readable>
+            <div class="brand"><span class="brand-mark" aria-hidden="true"></span> VIA</div>
+            <p class="eyebrow">Olá. Este é o protótipo VIA.</p>
+            <h2>Para onde você quer ir?</h2>
+            <button class="search-button" data-go="planner">
+              ${icon("search")}<span>Buscar destino ou endereço</span><span aria-hidden="true">›</span>
+            </button>
+            <button class="voice-card" id="hero-voice-button">
+              ${icon("mic")}
+              <span><strong>Planejar por voz</strong><small>Diga “Rota para UEL”</small></span>
+              <span aria-hidden="true">›</span>
+            </button>
+          </section>
+          <section class="content">
+            <h2 class="section-title">Acesso rápido</h2>
+            <div class="quick-grid">
+              <button class="quick-button primary" data-go="planner">${icon("route")}<span>Planejar viagem</span></button>
+              <button class="quick-button" data-go="map">${icon("pin")}<span>Abrir mapa</span></button>
+            </div>
+            <h2 class="section-title" style="margin-top:24px">Próximos ônibus simulados</h2>
+            <div class="line-list" aria-label="Linhas próximas">
+              ${lineRow("201", "Terminal Central • Vivi Xavier", "3 min", "line201")}
+              ${lineRow("108", "Terminal Central • Acapulco", "8 min", "line201")}
+              ${lineRow("305", "Terminal Oeste • UEL", "12 min", "line201")}
+            </div>
+          </section>`;
+      }
+
+      function lineRow(number, destination, time, target) {
+        return `<button class="line-button" data-go="${target}" aria-label="Linha ${number}, ${destination}, previsão simulada ${time}">
+          <span class="line-number">${number}</span>
+          <span><strong>${destination}</strong><small>Veículo simulado a caminho</small></span>
+          <span class="arrival">${time}</span>
+        </button>`;
+      }
+
+      function renderMap() {
+        return `<section class="map-demo" aria-label="Mapa demonstrativo da região central">
+          <span class="map-label one">${icon("bus")} Linha 201</span>
+          <span class="map-label two">${icon("bus")} Linha 108</span>
+          <span class="user-position" aria-label="Posição simulada do usuário" tabindex="0"></span>
+        </section>
+        <section class="content">
+          <div class="notice">Mapa e posições meramente demonstrativos. Use “Minha localização” para solicitar a localização do dispositivo.</div>
+          <button class="button" style="width:100%;margin-top:12px" data-action="location">Minha localização</button>
+        </section>`;
+      }
+
+      function renderPlanner() {
+        return `<section class="content">
+          <label class="field">Origem
+            <input id="origin-input" value="${escapeHtml(state.origin)}" autocomplete="street-address" />
+          </label>
+          <label class="field">Destino
+            <input id="destination-input" value="${escapeHtml(state.destination)}" placeholder="Informe o destino" autocomplete="street-address" />
+          </label>
+          <button class="button" style="width:100%" data-action="confirm-route">Ver opções de trajeto</button>
+          <div id="route-results" style="margin-top:16px">${state.destination ? routeResults() : ""}</div>
+          <section class="card" style="margin-top:16px">
+            <h3>Preencher por voz</h3>
+            <p>Diga “origem Terminal Central”, “destino UEL” ou “rota para UEL”.</p>
+          </section>
+        </section>`;
+      }
+
+      function routeResults() {
+        return `<button class="route-card recommended" style="width:100%;text-align:left;color:inherit" data-go="tripActive" data-readable>
+          <h3><span>Melhor opção simulada</span><span>32 min</span></h3>
+          <div class="steps"><span>Caminhe 4 min</span><span>—</span><b>305</b><span>—</span><span>Caminhe 3 min</span></div>
+        </button>
+        <button class="route-card" style="width:100%;text-align:left;color:inherit" data-go="tripActive" data-readable>
+          <h3><span>Alternativa simulada</span><span>41 min</span></h3>
+          <div class="steps"><b>201</b><span>—</span><b>108</b><span>1 integração</span></div>
+        </button>`;
+      }
+
+      function renderTripOptions() {
+        return `<section class="content">
+          <p class="eyebrow">ATÉ</p>
+          <h2>${escapeHtml(state.destination || "UEL — Universidade Estadual de Londrina")}</h2>
+          <p class="notice">Opções demonstrativas saindo agora da sua localização.</p>
+          <div style="margin-top:16px">${routeResults()}</div>
+        </section>`;
+      }
+
+      function renderTripActive() {
+        return `<section class="map-demo" aria-label="Mapa simulado da viagem ativa">
+          <span class="map-label one">${icon("bus")} Linha 305</span>
+          <span class="user-position" aria-hidden="true"></span>
+        </section>
+        <section class="content">
+          <article class="card" data-readable>
+            <p class="eyebrow">VIAGEM EM ANDAMENTO</p>
+            <h2>Desça em 4 paradas</h2>
+            <p>Destino: ${escapeHtml(state.destination || "UEL")}</p>
+            <div class="progress" style="margin-top:14px"><span></span></div>
+          </article>
+          <article class="card"><h3>Próxima parada</h3><p>Av. Maringá, 1.210 • aproximadamente 12 min</p></article>
+          <div class="quick-grid">
+            <button class="button secondary" data-action="speak-trip">Ouvir orientação</button>
+            <button class="button" data-go="trips">Encerrar viagem</button>
+          </div>
+        </section>`;
+      }
+
+      function renderLocation() {
+        return `<section class="content">
+          <div class="card">
+            <h3>Localização do dispositivo</h3>
+            <p id="location-result">A localização ainda não foi solicitada.</p>
+          </div>
+          <button class="button" style="width:100%" data-action="location">Solicitar localização</button>
+          <p class="notice" style="margin-top:12px">Sua posição não é armazenada por este protótipo.</p>
+        </section>`;
+      }
+
+      function renderLine() {
+        return `<section class="content">
+          <article class="card" data-readable>
+            <span class="line-number">201</span>
+            <h2>Terminal Central • Vivi Xavier</h2>
+            <p>Operação e previsão simuladas para demonstração.</p>
+          </article>
+          <article class="route-card">
+            <h3><span>Próximo ônibus</span><span>3 min</span></h3>
+            <p>Veículo LD 2451 • dado simulado</p>
+          </article>
+          <div class="quick-grid">
+            <button class="button secondary" data-go="wait">Solicitar apoio</button>
+            <button class="button" data-go="planner">Planejar com esta linha</button>
+          </div>
+        </section>`;
+      }
+
+      function renderWait() {
+        return `<section class="content">
+          <div class="status-hero">
+            ${icon("bus")}
+            <h2>Em qual linha você pretende embarcar?</h2>
+            <p>Registre o ponto e o apoio necessário. O envio ao transporte é simulado.</p>
+          </div>
+          <div class="card"><h3>Seu ponto</h3><p>Av. Paraná, 532 • ponto demonstrativo</p></div>
+          <div class="line-list">
+            ${["201", "108", "305"].map((line) => `<button class="line-button" data-select-line="${line}"><span class="line-number">${line}</span><span><strong>Linha ${line}</strong><small>Selecione para continuar</small></span><span>${state.selectedLine === line ? "✓" : "›"}</span></button>`).join("")}
+          </div>
+          <button class="button" style="width:100%;margin-top:18px" data-go="waitConfirm">Continuar</button>
+        </section>`;
+      }
+
+      function renderWaitConfirm() {
+        return `<section class="content">
+          <article class="card"><span class="line-number">${state.selectedLine}</span><h2>Linha selecionada</h2><p>Av. Paraná, 532</p></article>
+          <h2 class="section-title">Como podemos ajudar?</h2>
+          <div class="check-list">
+            ${supportOption("more-time", "Mais tempo para embarcar")}
+            ${supportOption("attention", "Atenção e auxílio no embarque")}
+            ${supportOption("lift", "Plataforma elevatória")}
+          </div>
+          <p class="notice" style="margin-top:14px">Nenhum diagnóstico é compartilhado. A solicitação é somente demonstrativa.</p>
+          <button class="button" style="width:100%;margin-top:14px" data-go="requestStatus">Registrar solicitação</button>
+        </section>`;
+      }
+
+      function supportOption(id, label) {
+        const selected = state.selectedNeeds.includes(id);
+        return `<button class="check-option" data-need="${id}" aria-pressed="${selected}"><span class="check">${selected ? "✓" : ""}</span><strong>${label}</strong></button>`;
+      }
+
+      function renderRequestStatus() {
+        return `<section class="content">
+          <div class="status-hero" data-readable>
+            ${icon("settings")}
+            <p class="eyebrow">SOLICITAÇÃO REGISTRADA</p>
+            <h2>Pendente de integração</h2>
+            <p>O pedido foi salvo apenas nesta demonstração e não foi enviado ao motorista.</p>
+          </div>
+          <div class="timeline">
+            <article class="card"><strong>1 ✓</strong><span><strong>Registrada no aplicativo</strong><br><small>Concluído agora</small></span></article>
+            <article class="card"><strong>2</strong><span><strong>Envio ao transporte</strong><br><small>Integração indisponível</small></span></article>
+            <article class="card"><strong>3</strong><span><strong>Recebimento pelo motorista</strong><br><small>Ainda não confirmado</small></span></article>
+          </div>
+          <button class="button" style="width:100%" data-go="home">Voltar ao início</button>
+        </section>`;
+      }
+
+      function renderTrips() {
+        return `<section class="content">
+          <div class="account-card"><h2>Onde vamos hoje?</h2><p>Planeje uma nova viagem demonstrativa.</p></div>
+          <div class="quick-grid" style="margin:14px 0">
+            <button class="quick-button" data-action="destination" data-value="Casa">${icon("pin")}<span>Casa</span></button>
+            <button class="quick-button" data-action="destination" data-value="Trabalho">${icon("bus")}<span>Trabalho</span></button>
+          </div>
+          <h2 class="section-title">Viagens recentes simuladas</h2>
+          <button class="menu-button" data-action="destination" data-value="UEL"><span>${icon("route")}</span><span><strong>Centro → UEL</strong><br><small>Linha 305 • 34 min • ontem</small></span><span>›</span></button>
+          <button class="menu-button" data-action="destination" data-value="Shopping Catuaí"><span>${icon("route")}</span><span><strong>Casa → Shopping Catuaí</strong><br><small>Linhas 201 + 427 • 46 min</small></span><span>›</span></button>
+          <button class="button" style="width:100%" data-go="planner">Planejar nova viagem</button>
+        </section>`;
+      }
+
+      function renderProfile() {
+        const name = state.account?.name || "Marina Alves";
+        const email = state.account?.email || "Sessão de demonstração";
+        return `<section class="content">
+          <div class="account-card"><h2>${escapeHtml(name)}</h2><p>${escapeHtml(email)}</p></div>
+          <div class="stack" style="margin-top:16px">
+            ${menuLink("settings", "Configurações", "Voz, visual, idioma e privacidade", "settings")}
+            ${menuLink("favorites", "Linhas favoritas", "3 linhas salvas", "bus")}
+            ${menuLink("history", "Histórico de viagens", "Trajetos demonstrativos", "route")}
+            ${menuLink("notifications", "Notificações", "Alertas e avisos", "settings")}
+            ${menuLink("account", "Dados da conta", "Nome, e-mail e telefone", "settings")}
+          </div>
+          <button class="text-button" style="margin-top:18px;color:#a32626" data-action="logout">${state.account ? "Sair da conta local" : "Encerrar demonstração"}</button>
+        </section>`;
+      }
+
+      function menuLink(target, label, detail, iconName) {
+        return `<button class="menu-button" data-go="${target}"><span>${icon(iconName)}</span><span><strong>${label}</strong><br><small>${detail}</small></span><span>›</span></button>`;
+      }
+
+      function renderSettings() {
+        return `<section class="content">
+          <h2 class="section-title">Acessibilidade</h2>
+          <div class="stack" style="margin-bottom:22px">
+            ${menuLink("accessibility", "Acessibilidade no aplicativo", "Voz, contraste, texto e interação", "settings")}
+            ${menuLink("travelAccessibility", "Acessibilidade durante a viagem", "Embarque, mobilidade e orientação", "bus")}
+          </div>
+          <h2 class="section-title">Voz e áudio</h2>
+          <div class="setting-group">
+            ${settingToggle("voiceCommands", "Comandos de voz", "Permite controlar o aplicativo falando")}
+            ${settingToggle("autoRead", "Leitura automática", "Lê confirmações e informações importantes")}
+            <label class="setting"><span><strong>Velocidade da fala</strong><small id="rate-value">${state.speechRate.toFixed(1)} vezes</small></span>
+              <input id="speech-rate" type="range" min="0.6" max="1.5" step="0.1" value="${state.speechRate}" aria-label="Velocidade da fala" />
+            </label>
+          </div>
+          <h2 class="section-title">Visual e interação</h2>
+          <div class="setting-group">
+            ${settingToggle("highContrast", "Alto contraste", "Aumenta a distinção entre elementos")}
+            ${settingToggle("largeText", "Texto ampliado", "Aumenta todos os textos")}
+            ${settingToggle("visualAlerts", "Avisos visuais", "Mostra sinais além dos sons")}
+            ${settingToggle("vibration", "Vibração", "Vibra em avisos quando disponível")}
+            ${settingToggle("largeTargets", "Áreas de toque maiores", "Facilita a seleção de controles")}
+          </div>
+          <h2 class="section-title">Comandos disponíveis</h2>
+          <div class="card">
+            <p>Abrir mapa • Planejar viagem • Minha localização • Linha 201 • Rota para UEL • Minhas viagens • Abrir configurações • Voltar • Início • Ler tela • Parar de ouvir • Próximo elemento • Elemento anterior • Selecionar.</p>
+          </div>
+          <h2 class="section-title">Alternativa por digitação</h2>
+          <div class="fallback">
+            <input class="command-input" id="typed-command" placeholder="Digite um comando" aria-label="Comando por texto" />
+            <button class="button" data-action="typed-command">Executar</button>
+          </div>
+          <div class="voice-log" id="voice-log">Nenhum comando reconhecido nesta sessão.</div>
+          <p class="notice" style="margin-top:12px">O áudio não é gravado pelo VIA. O mecanismo de reconhecimento do navegador pode usar serviços externos do fornecedor do navegador.</p>
+        </section>`;
+      }
+
+      function renderAccessibility() {
+        return `<section class="content">
+          <div class="status-hero"><h2>Uso do aplicativo</h2><p>Recursos para navegar, ler e compreender com mais autonomia.</p></div>
+          <div class="setting-group">
+            ${settingToggle("autoRead", "Leitura por voz", "Lê confirmações e informações")}
+            ${settingToggle("highContrast", "Alto contraste", "Cores e contornos mais visíveis")}
+            ${settingToggle("largeText", "Texto ampliado", "Aumenta o texto em todas as telas")}
+            ${settingToggle("visualAlerts", "Alertas visuais", "Mostra sinais além dos sons")}
+            ${settingToggle("largeTargets", "Áreas de toque maiores", "Amplia os controles")}
+          </div>
+          <h2 class="section-title">Preferências detalhadas</h2>
+          <div class="check-list">
+            ${personalizeOption("autoRead", "Suporte por áudio", "Informações e confirmações faladas")}
+            ${personalizeOption("highContrast", "Baixa visão", "Maior contraste visual")}
+            ${personalizeOption("largeTargets", "Dificuldade motora", "Controles mais fáceis de tocar")}
+          </div>
+        </section>`;
+      }
+
+      function renderTravelAccessibility() {
+        const needs = [
+          ["wheelchair", "Utilização de cadeira de rodas"],
+          ["lift", "Plataforma elevatória"],
+          ["more-time", "Mais tempo para embarcar"],
+          ["arrival-audio", "Aviso sonoro de chegada"],
+          ["arrival-visual", "Aviso visual de chegada"],
+          ["route-warning", "Avisos antecipados de mudança"],
+        ];
+        return `<section class="content">
+          <div class="status-hero"><h2>Acessibilidade durante a viagem</h2><p>Cadastre somente os apoios que desejar.</p></div>
+          <div class="check-list">${needs.map(([id, label]) => supportOption(id, label)).join("")}</div>
+          <button class="button" style="width:100%;margin-top:18px" data-action="save-travel">Salvar preferências de viagem</button>
+        </section>`;
+      }
+
+      function renderFavorites() {
+        return `<section class="content"><h2 class="section-title">Linhas favoritas</h2>
+          ${lineRow("201", "Terminal Central • Vivi Xavier", "3 min", "line201")}
+          ${lineRow("108", "Terminal Central • Acapulco", "8 min", "line201")}
+          ${lineRow("305", "Terminal Oeste • UEL", "12 min", "line201")}
+        </section>`;
+      }
+
+      function renderHistory() {
+        return `<section class="content"><h2 class="section-title">Histórico demonstrativo</h2>
+          <article class="card"><h3>Centro → UEL</h3><p>Ontem • Linha 305 • 34 min</p></article>
+          <article class="card"><h3>Casa → Shopping Catuaí</h3><p>Segunda • Linhas 201 + 427</p></article>
+          <article class="card"><h3>Lago Igapó → Centro</h3><p>12 de maio • Linha 108 • 22 min</p></article>
+        </section>`;
+      }
+
+      function renderNotifications() {
+        return `<section class="content"><h2 class="section-title">Notificações simuladas</h2>
+          <article class="card"><h3>Linha 201 chegando</h3><p>Chegada prevista em aproximadamente 3 minutos.</p></article>
+          <article class="card"><h3>Hora de se preparar</h3><p>Faltam duas paradas para seu destino.</p></article>
+          <article class="card"><h3>Mudança temporária</h3><p>A linha 427 teve o itinerário demonstrativo alterado.</p></article>
+        </section>`;
+      }
+
+      function renderAccount() {
+        return `<section class="access-shell">
+          <form id="account-form" class="stack">
+            <label class="field">Nome completo<input id="account-name" required value="${escapeHtml(state.account?.name || "Marina Alves")}" /></label>
+            <label class="field">E-mail<input id="account-email" type="email" inputmode="email" required value="${escapeHtml(state.account?.email || "")}" /></label>
+            <label class="field">Telefone<input id="account-phone" inputmode="tel" value="${escapeHtml(state.account?.phone || "(43) 99999-1234")}" /></label>
+            <button class="button" type="submit">Salvar alterações locais</button>
+          </form>
+          <p class="notice" style="margin-top:16px">Os dados permanecem somente neste navegador.</p>
+        </section>`;
+      }
+
+      function settingToggle(key, label, description) {
+        return `<div class="setting">
+          <span><strong>${label}</strong><small>${description}</small></span>
+          <button class="toggle" data-toggle="${key}" aria-label="${label}" aria-pressed="${state.prefs[key]}"><span></span></button>
+        </div>`;
+      }
+
+      function navigate(screen, addHistory = true) {
+        if (!screens[screen]) return;
+        if (addHistory && state.screen !== screen) state.history.push(state.screen);
+        state.screen = screen;
+        render();
+        window.scrollTo({ top: 0, behavior: "auto" });
+        main.focus({ preventScroll: true });
+        if (state.prefs.autoRead) {
+          window.setTimeout(() => say(`Tela ${screens[screen].title}. ${screenSummary()}`), 120);
+        }
+      }
+
+      function goBack() {
+        navigate(state.history.pop() || "home", false);
+      }
+
+      function render() {
+        const config = screens[state.screen];
+        title.textContent = config.title;
+        main.innerHTML = config.render();
+        const accessScreens = ["welcome", "auth", "email", "recovery", "personalize", "home"];
+        const navScreens = [
+          "home",
+          "map",
+          "line201",
+          "trips",
+          "tripOptions",
+          "profile",
+          "settings",
+          "favorites",
+          "history",
+          "notifications",
+        ];
+        appHeader.hidden = ["welcome", "home"].includes(state.screen);
+        backButton.hidden = ["welcome", "home"].includes(state.screen);
+        bottomNav.hidden = !navScreens.includes(state.screen);
+        document.querySelector("#app").classList.toggle("without-nav", bottomNav.hidden);
+        micButton.dataset.screenHidden = String(accessScreens.includes(state.screen));
+        document.querySelectorAll(".bottom-nav button").forEach((button) => {
+          const activeScreen =
+            state.screen === "line201"
+              ? "map"
+              : ["history", "tripOptions"].includes(state.screen)
+                ? "trips"
+                : ["settings", "favorites", "notifications"].includes(state.screen)
+                  ? "profile"
+                  : state.screen;
+          button.classList.toggle("active", button.dataset.screen === activeScreen);
+          button.setAttribute(
+            "aria-current",
+            button.dataset.screen === activeScreen ? "page" : "false",
+          );
+        });
+        bindScreenEvents();
+        applyPreferences();
+      }
+
+      function bindScreenEvents() {
+        main.querySelectorAll("[data-go]").forEach((button) => {
+          button.addEventListener("click", () => navigate(button.dataset.go));
+        });
+        main.querySelectorAll("[data-toggle]").forEach((button) => {
+          button.addEventListener("click", () => togglePreference(button.dataset.toggle));
+        });
+        main.querySelectorAll('[data-action="location"]').forEach((button) => {
+          button.addEventListener("click", requestLocation);
+        });
+        main.querySelectorAll('[data-action="confirm-route"]').forEach((button) => {
+          button.addEventListener("click", confirmRoute);
+        });
+        main.querySelectorAll("[data-pref-screen]").forEach((button) => {
+          button.addEventListener("click", () => togglePreference(button.dataset.prefScreen));
+        });
+        main.querySelectorAll("[data-need]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const id = button.dataset.need;
+            state.selectedNeeds = state.selectedNeeds.includes(id)
+              ? state.selectedNeeds.filter((item) => item !== id)
+              : [...state.selectedNeeds, id];
+            render();
+          });
+        });
+        main.querySelectorAll("[data-select-line]").forEach((button) => {
+          button.addEventListener("click", () => {
+            state.selectedLine = button.dataset.selectLine;
+            render();
+          });
+        });
+        main.querySelectorAll('[data-action="social-demo"]').forEach((button) => {
+          button.addEventListener("click", () =>
+            showMessage(
+              "Acesso social demonstrativo",
+              "Google e Apple exigem um backend. Use e-mail ou continue sem conta neste arquivo.",
+            ),
+          );
+        });
+        main.querySelector('[data-action="login"]')?.addEventListener("click", () => {
+          state.authMode = "login";
+          navigate("email");
+        });
+        main.querySelector('[data-action="register"]')?.addEventListener("click", () => {
+          state.authMode = "register";
+          navigate("email");
+        });
+        main.querySelector('[data-action="switch-auth"]')?.addEventListener("click", () => {
+          state.authMode = state.authMode === "login" ? "register" : "login";
+          render();
+        });
+        main.querySelector('[data-action="finish-personalize"]')?.addEventListener("click", () => {
+          savePreferences();
+          navigate("home");
+          showMessage("Preferências aplicadas", "Você pode alterá-las em Configurações.");
+        });
+        main.querySelector('[data-action="logout"]')?.addEventListener("click", () => {
+          localStorage.removeItem("via-local-account");
+          state.account = null;
+          state.history = [];
+          navigate("welcome", false);
+        });
+        main.querySelectorAll('[data-action="destination"]').forEach((button) => {
+          button.addEventListener("click", () => {
+            state.destination = button.dataset.value;
+            navigate("tripOptions");
+          });
+        });
+        main.querySelector('[data-action="speak-trip"]')?.addEventListener("click", () => {
+          say("Você está na linha 305. Faltam quatro paradas para descer.");
+        });
+        main.querySelector('[data-action="save-travel"]')?.addEventListener("click", () => {
+          localStorage.setItem("via-travel-needs", JSON.stringify(state.selectedNeeds));
+          showMessage("Preferências salvas", "Os apoios de viagem foram salvos neste navegador.");
+        });
+        main.querySelectorAll('[data-action="typed-command"]').forEach((button) => {
+          button.addEventListener("click", () => {
+            const input = document.querySelector("#typed-command");
+            processCommand(input.value);
+          });
+        });
+        const origin = document.querySelector("#origin-input");
+        const destination = document.querySelector("#destination-input");
+        if (origin) origin.addEventListener("input", (event) => (state.origin = event.target.value));
+        if (destination)
+          destination.addEventListener("input", (event) => (state.destination = event.target.value));
+        const rate = document.querySelector("#speech-rate");
+        if (rate) {
+          rate.addEventListener("input", (event) => {
+            state.speechRate = Number(event.target.value);
+            document.querySelector("#rate-value").textContent = `${state.speechRate.toFixed(1)} vezes`;
+            savePreferences();
+          });
+        }
+        const heroVoice = document.querySelector("#hero-voice-button");
+        if (heroVoice) heroVoice.addEventListener("click", voice);
+        const authForm = document.querySelector("#auth-form");
+        if (authForm) {
+          authForm.addEventListener("submit", (event) => {
+            event.preventDefault();
+            const email = document.querySelector("#auth-email").value.trim().toLowerCase();
+            const password = document.querySelector("#auth-password").value;
+            const name = document.querySelector("#auth-name")?.value.trim();
+            if (password.length < 8) {
+              showMessage("Senha muito curta", "Use pelo menos 8 caracteres.", true);
+              return;
+            }
+            if (state.authMode === "login" && state.account && state.account.email !== email) {
+              showMessage("Conta não encontrada", "Use o e-mail cadastrado neste navegador.", true);
+              return;
+            }
+            state.account = {
+              ...(state.account || {}),
+              name: name || state.account?.name || email.split("@")[0] || "Usuário VIA",
+              email,
+            };
+            localStorage.setItem("via-local-account", JSON.stringify(state.account));
+            navigate(state.authMode === "register" ? "personalize" : "home");
+            showMessage(
+              "Acesso local concluído",
+              "Esta sessão demonstrativa existe somente neste navegador.",
+            );
+          });
+        }
+        const recoveryForm = document.querySelector("#recovery-form");
+        if (recoveryForm) {
+          recoveryForm.addEventListener("submit", (event) => {
+            event.preventDefault();
+            const email = document.querySelector("#recovery-email").value.trim().toLowerCase();
+            if (!state.account || state.account.email !== email) {
+              showMessage(
+                "Conta local não encontrada",
+                "Cadastre uma conta neste navegador ou continue sem conta.",
+                true,
+              );
+              return;
+            }
+            state.authMode = "register";
+            navigate("email");
+            showMessage(
+              "Redefinição local",
+              "Defina uma nova senha demonstrativa para continuar.",
+            );
+          });
+        }
+        const accountForm = document.querySelector("#account-form");
+        if (accountForm) {
+          accountForm.addEventListener("submit", (event) => {
+            event.preventDefault();
+            state.account = {
+              name: document.querySelector("#account-name").value.trim(),
+              email: document.querySelector("#account-email").value.trim().toLowerCase(),
+              phone: document.querySelector("#account-phone").value.trim(),
+            };
+            localStorage.setItem("via-local-account", JSON.stringify(state.account));
+            showMessage("Dados atualizados", "As alterações foram salvas neste navegador.");
+            navigate("profile");
+          });
+        }
+      }
+
+      async function ensureMicrophonePermission() {
+        if (!window.isSecureContext && location.hostname !== "localhost") {
+          throw new Error("secure-context");
+        }
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error("media-unsupported");
+        }
+        // A previous grant may have been revoked in browser settings.
+        // Check again rather than trusting cached state.
+
+
+        if (navigator.permissions?.query) {
+          try {
+            const status = await navigator.permissions.query({ name: "microphone" });
+            if (status.state === "denied") throw new Error("permission-denied");
+          } catch {
+            // Safari e outros navegadores podem não aceitar "microphone" na Permissions API.
+          }
+        }
+
+        let stream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          state.permissionGranted = true;
+        } catch (error) {
+          if (error?.name === "NotAllowedError" || error?.name === "SecurityError") {
+            throw new Error("permission-denied");
+          }
+          if (error?.name === "NotFoundError" || error?.name === "DevicesNotFoundError") {
+            throw new Error("microphone-missing");
+          }
+          if (error?.name === "NotReadableError" || error?.name === "AbortError") {
+            throw new Error("microphone-busy");
+          }
+          throw error;
+        } finally {
+          stream?.getTracks().forEach((track) => track.stop());
+        }
+      }
+
+      async function voice() {
+        if (state.listening) {
+          stopListening("Escuta interrompida.");
+          return;
+        }
+        if (!state.prefs.voiceCommands) {
+          showMessage("Comandos desativados", "Ative os comandos de voz em Configurações.");
+          return;
+        }
+        if (!SpeechRecognition) {
+          showMessage(
+            "Reconhecimento indisponível",
+            "Este navegador não oferece reconhecimento de voz. Use o campo de digitação em Configurações.",
+            true,
+          );
+          return;
+        }
+
+        try {
+          await ensureMicrophonePermission();
+          startRecognition();
+        } catch (error) {
+          const messages = {
+            "secure-context": "Abra o VIA em HTTPS ou localhost para usar o microfone.",
+            "media-unsupported": "Este navegador não oferece acesso compatível ao microfone.",
+            "permission-denied":
+              "A permissão foi recusada. Abra as configurações do site no navegador, habilite o microfone e tente novamente.",
+            "microphone-missing": "Nenhum microfone foi encontrado. Conecte um dispositivo e tente novamente.",
+            "microphone-busy":
+              "O microfone está indisponível ou sendo usado por outro aplicativo. Feche o outro uso e tente novamente.",
+          };
+          showMessage("Não foi possível ativar o microfone", messages[error.message] || "Verifique o dispositivo e tente novamente.", true);
+        }
+      }
+
+      function startRecognition() {
+        window.speechSynthesis?.cancel();
+        const recognition = new SpeechRecognition();
+        recognition.lang = "pt-BR";
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 3;
+
+        recognition.onstart = () => {
+          state.recognition = recognition;
+          state.listening = true;
+          micButton.classList.add("listening");
+          micButton.setAttribute("aria-pressed", "true");
+          listeningPanel.hidden = false;
+          announce("Microfone ativado. Estou ouvindo.");
+          if (state.prefs.vibration && navigator.vibrate) navigator.vibrate(35);
+        };
+        recognition.onresult = (event) => {
+          let transcript = "";
+          let finalResult = false;
+          for (let index = event.resultIndex; index < event.results.length; index += 1) {
+            transcript += event.results[index][0].transcript;
+            if (event.results[index].isFinal) finalResult = true;
+          }
+          state.command = transcript.trim();
+          showMessage("Comando reconhecido", state.command || "Ouvindo...");
+          if (finalResult && state.command && !recognition.commandHandled) {
+            recognition.commandHandled = true;
+            recognition.stop();
+            processCommand(state.command);
+          }
+        };
+        recognition.onerror = (event) => {
+          const messages = {
+            "not-allowed": "Acesso negado. Habilite o microfone nas configurações do site.",
+            "audio-capture": "O microfone foi desconectado ou não está disponível.",
+            "no-speech": "Nenhuma fala foi detectada. Toque no microfone e tente novamente.",
+            network: "O serviço de reconhecimento não respondeu. Verifique a conexão.",
+            aborted: "A escuta foi interrompida.",
+          };
+          showMessage("Erro no reconhecimento", messages[event.error] || "Não foi possível reconhecer a fala.", true);
+        };
+        recognition.onend = () => {
+          state.listening = false;
+          state.recognition = null;
+          micButton.classList.remove("listening");
+          micButton.setAttribute("aria-pressed", "false");
+          listeningPanel.hidden = true;
+        };
+        try {
+          recognition.start();
+        } catch {
+          showMessage("Microfone indisponível", "A escuta já estava iniciada ou o navegador bloqueou a operação.", true);
+        }
+      }
+
+      function stopListening(message = "Escuta encerrada.") {
+        state.recognition?.abort();
+        state.listening = false;
+        state.recognition = null;
+        micButton.classList.remove("listening");
+        micButton.setAttribute("aria-pressed", "false");
+        listeningPanel.hidden = true;
+        announce(message);
+      }
+
+      function normalize(text) {
+        return text
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase()
+          .replace(/[.,!?]/g, "")
+          .replace(/\s+/g, " ")
+          .trim();
+      }
+
+      function processCommand(rawCommand) {
+        const command = normalize(rawCommand);
+        state.command = rawCommand.trim();
+        updateVoiceLog();
+        if (!command) return unknownCommand();
+
+        if (command.includes("parar de ouvir") || command === "parar") {
+          stopListening("Comando de voz interrompido.");
+          confirmAction("Escuta interrompida.");
+          return;
+        }
+        if (command === "abrir mapa" || command === "mapa" || command === "ver mapa") {
+          navigate("map");
+          return confirmAction("Abrindo o mapa.");
+        }
+        if (command.includes("planejar viagem") || command === "nova viagem") {
+          navigate("planner");
+          return confirmAction("Abrindo o planejamento de viagem.");
+        }
+        if (command.includes("minha localizacao") || command.includes("onde estou")) {
+          navigate("location");
+          requestLocation();
+          return;
+        }
+        if (/linha\s+201/.test(command)) {
+          navigate("line201");
+          return confirmAction("Abrindo as informações simuladas da linha 201.");
+        }
+        const route = command.match(/(?:rota|ir|destino)\s+(?:para|ate)\s+(.+)/);
+        if (route) {
+          state.destination = displayDestination(route[1]);
+          navigate("planner");
+          confirmRoute();
+          return confirmAction(`Destino preenchido: ${state.destination}.`);
+        }
+        const origin = command.match(/^(?:preencher\s+)?origem(?:\s+e|\s+eh|\s+para)?\s+(.+)/);
+        if (origin) {
+          state.origin = displayDestination(origin[1]);
+          navigate("planner");
+          return confirmAction(`Origem preenchida: ${state.origin}.`);
+        }
+        const destination = command.match(/^(?:preencher\s+)?destino(?:\s+e|\s+eh|\s+para)?\s+(.+)/);
+        if (destination) {
+          state.destination = displayDestination(destination[1]);
+          navigate("planner");
+          return confirmAction(`Destino preenchido: ${state.destination}.`);
+        }
+        if (command.includes("minhas viagens")) {
+          navigate("trips");
+          return confirmAction("Abrindo minhas viagens.");
+        }
+        if (command.includes("abrir configuracoes") || command === "configuracoes") {
+          navigate("settings");
+          return confirmAction("Abrindo as configurações de acessibilidade.");
+        }
+        if (command === "voltar" || command.includes("tela anterior")) {
+          goBack();
+          return confirmAction("Voltando.");
+        }
+        if (command === "inicio" || command.includes("tela inicial")) {
+          navigate("home");
+          return confirmAction("Voltando ao início.");
+        }
+        if (command.includes("ler tela")) {
+          return readScreen();
+        }
+        if (command.includes("proximo elemento")) {
+          return moveFocus(1);
+        }
+        if (command.includes("elemento anterior")) {
+          return moveFocus(-1);
+        }
+        if (command === "selecionar" || command === "confirmar opcao") {
+          const active = document.activeElement;
+          if (active && typeof active.click === "function") {
+            active.click();
+            return confirmAction("Opção selecionada.");
+          }
+        }
+        unknownCommand();
+      }
+
+      function displayDestination(value) {
+        const normalized = normalize(value);
+        if (normalized === "uel") return "UEL — Universidade Estadual de Londrina";
+        return value
+          .trim()
+          .split(" ")
+          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(" ");
+      }
+
+      function unknownCommand() {
+        showMessage(
+          "Comando não compreendido",
+          "Tente dizer “Abrir mapa”, “Planejar viagem”, “Linha 201” ou digite o comando em Configurações.",
+          true,
+        );
+        if (state.prefs.autoRead) say("Não entendi o comando. Tente novamente.");
+      }
+
+      function confirmAction(message) {
+        showMessage("Comando executado", message);
+        if (state.prefs.autoRead) say(message);
+      }
+
+      function say(text) {
+        if (!("speechSynthesis" in window)) {
+          showMessage("Leitura indisponível", "Este navegador não oferece síntese de voz.", true);
+          return;
+        }
+        if (state.listening) stopListening();
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = "pt-BR";
+        utterance.rate = state.speechRate;
+        utterance.onstart = () => document.body.setAttribute("data-speaking", "true");
+        utterance.onend = () => document.body.removeAttribute("data-speaking");
+        utterance.onerror = () => document.body.removeAttribute("data-speaking");
+        window.speechSynthesis.speak(utterance);
+      }
+
+      function readScreen() {
+        const text = screenSummary();
+        showMessage("Leitura da tela", text);
+        say(text);
+      }
+
+      function screenSummary() {
+        const readable = Array.from(main.querySelectorAll("[data-readable], h1, h2, h3, p"))
+          .map((element) => element.textContent.trim())
+          .filter(Boolean);
+        return readable.slice(0, 12).join(". ") || `Tela ${screens[state.screen].title}.`;
+      }
+
+      function moveFocus(direction) {
+        const elements = Array.from(
+          document.querySelectorAll(
+            'button:not([hidden]):not(:disabled), input:not(:disabled), select:not(:disabled), [tabindex="0"]',
+          ),
+        ).filter((element) => element.offsetParent !== null);
+        if (!elements.length) return;
+        const current = elements.indexOf(document.activeElement);
+        const index = current < 0 ? 0 : (current + direction + elements.length) % elements.length;
+        elements[index].focus();
+        elements[index].scrollIntoView({ behavior: "smooth", block: "center" });
+        if (state.prefs.autoRead) say(elements[index].getAttribute("aria-label") || elements[index].textContent.trim());
+      }
+
+      function confirmRoute() {
+        const origin = document.querySelector("#origin-input");
+        const destination = document.querySelector("#destination-input");
+        if (origin) state.origin = origin.value.trim() || "Minha localização";
+        if (destination) state.destination = destination.value.trim();
+        if (!state.destination) {
+          showMessage("Destino necessário", "Informe ou fale um destino antes de continuar.", true);
+          return;
+        }
+        navigate("tripOptions");
+        showMessage(
+          "Rotas simuladas",
+          `Opções demonstrativas de ${state.origin} para ${state.destination}.`,
+        );
+      }
+
+      function requestLocation() {
+        if (!navigator.geolocation) {
+          return showMessage("Localização indisponível", "Este navegador não oferece geolocalização.", true);
+        }
+        showMessage("Solicitando localização", "Confirme a permissão no navegador.");
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const text = `Localização obtida com precisão aproximada de ${Math.round(position.coords.accuracy)} metros.`;
+            const result = document.querySelector("#location-result");
+            if (result) result.textContent = text;
+            showMessage("Localização disponível", text);
+            if (state.prefs.autoRead) say(text);
+          },
+          (error) => {
+            const messages = {
+              1: "Permissão negada. Habilite a localização nas configurações do site.",
+              2: "A posição não está disponível neste momento.",
+              3: "O pedido de localização demorou demais.",
+            };
+            showMessage("Não foi possível obter a localização", messages[error.code] || "Tente novamente.", true);
+          },
+          { enableHighAccuracy: false, maximumAge: 60000, timeout: 10000 },
+        );
+      }
+
+      function togglePreference(key) {
+        state.prefs[key] = !state.prefs[key];
+        savePreferences();
+        applyPreferences();
+        render();
+        announce(`${preferenceLabel(key)} ${state.prefs[key] ? "ativado" : "desativado"}.`);
+      }
+
+      function preferenceLabel(key) {
+        return {
+          voiceCommands: "Comandos de voz",
+          autoRead: "Leitura automática",
+          highContrast: "Alto contraste",
+          largeText: "Texto ampliado",
+          visualAlerts: "Avisos visuais",
+          vibration: "Vibração",
+          largeTargets: "Áreas de toque maiores",
+        }[key] || key;
+      }
+
+      function applyPreferences() {
+        document.body.classList.toggle("high-contrast", state.prefs.highContrast);
+        document.body.classList.toggle("large-targets", state.prefs.largeTargets);
+        document.body.classList.toggle("visual-alerts", state.prefs.visualAlerts);
+        document.documentElement.style.setProperty("--text-scale", state.prefs.largeText ? "1.18" : "1");
+        micButton.hidden =
+          !state.prefs.voiceCommands || micButton.dataset.screenHidden === "true";
+      }
+
+      function savePreferences() {
+        localStorage.setItem(
+          "via-accessibility",
+          JSON.stringify({ prefs: state.prefs, speechRate: state.speechRate }),
+        );
+      }
+
+      function loadPreferences() {
+        try {
+          const saved = JSON.parse(localStorage.getItem("via-accessibility") || "null");
+          if (saved?.prefs) Object.assign(state.prefs, saved.prefs);
+          if (Number.isFinite(saved?.speechRate)) state.speechRate = saved.speechRate;
+        } catch {
+          localStorage.removeItem("via-accessibility");
+        }
+      }
+
+      function showMessage(heading, text, isError = false) {
+        messageTitle.textContent = heading;
+        messageText.textContent = text;
+        messagePanel.classList.toggle("error", isError);
+        messagePanel.hidden = false;
+        announce(`${heading}. ${text}`);
+        window.clearTimeout(showMessage.timer);
+        showMessage.timer = window.setTimeout(() => (messagePanel.hidden = true), 7000);
+      }
+
+      function announce(text) {
+        liveRegion.textContent = "";
+        window.setTimeout(() => (liveRegion.textContent = text), 20);
+      }
+
+      function updateVoiceLog() {
+        const log = document.querySelector("#voice-log");
+        if (log) log.textContent = state.command ? `Último comando: “${state.command}”` : "Nenhum comando reconhecido.";
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      backButton.addEventListener("click", goBack);
+      micButton.addEventListener("click", voice);
+      document.querySelectorAll(".bottom-nav button").forEach((button) => {
+        button.addEventListener("click", () => navigate(button.dataset.screen));
+      });
+
+      document.querySelector("#skip-onboarding").addEventListener("click", () => {
+        localStorage.setItem("via-onboarding-complete", "true");
+        onboarding.hidden = true;
+        main.focus();
+      });
+      document.querySelector("#save-onboarding").addEventListener("click", () => {
+        localStorage.setItem("via-onboarding-complete", "true");
+        savePreferences();
+        onboarding.hidden = true;
+        applyPreferences();
+        render();
+        announce("Preferências aplicadas.");
+      });
+      onboarding.querySelectorAll("[data-pref]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const key = button.dataset.pref;
+          state.prefs[key] = !state.prefs[key];
+          button.setAttribute("aria-pressed", String(state.prefs[key]));
+          button.querySelector(".check").textContent = state.prefs[key] ? "✓" : "";
+        });
+      });
+
+      loadPreferences();
+      try {
+        state.account = JSON.parse(localStorage.getItem("via-local-account") || "null");
+        state.selectedNeeds = JSON.parse(localStorage.getItem("via-travel-needs") || "[]");
+      } catch {
+        state.account = null;
+        state.selectedNeeds = [];
+      }
+      applyPreferences();
+      render();
+
+      window.voice = voice;
+      window.processCommand = processCommand;
+      window.say = say;
+    </script>
+  </body>
+</html>
