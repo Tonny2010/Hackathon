@@ -1319,7 +1319,7 @@
           <h2>Como podemos facilitar o uso do aplicativo?</h2>
           <p>Selecione quantos recursos desejar. Tudo pode ser alterado depois.</p>
           <div class="check-list">
-            ${personalizeOption("autoRead", "Suporte por áudio", "Leitura automática e confirmações faladas")}
+            ${personalizeOption("autoRead", "Suporte por áudio", "Leitura ao tocar ou apontar para itens")}
             ${personalizeOption("highContrast", "Alto contraste", "Fundos e elementos mais distintos")}
             ${personalizeOption("largeText", "Textos maiores", "Amplia os textos em todas as telas")}
             ${personalizeOption("visualAlerts", "Avisos visuais", "Não depende somente de sons")}
@@ -1730,7 +1730,7 @@
           <h2 class="section-title">Voz e áudio</h2>
           <div class="setting-group">
             ${settingToggle("voiceCommands", "Comandos de voz", "Permite controlar o aplicativo falando")}
-            ${settingToggle("autoRead", "Leitura automática", "Lê confirmações e informações importantes")}
+            ${settingToggle("autoRead", "Leitura por contato", "Lê apenas ao tocar ou passar o mouse")}
             <label class="setting"><span><strong>Velocidade da fala</strong><small id="rate-value">${state.speechRate.toFixed(1)} vezes</small></span>
               <input id="speech-rate" type="range" min="0.6" max="1.5" step="0.1" value="${state.speechRate}" aria-label="Velocidade da fala" />
             </label>
@@ -1760,7 +1760,7 @@
         return `<section class="content">
           <div class="status-hero"><h2>Uso do aplicativo</h2><p>Recursos para navegar, ler e compreender com mais autonomia.</p></div>
           <div class="setting-group">
-            ${settingToggle("autoRead", "Leitura por voz", "Lê confirmações e informações")}
+            ${settingToggle("autoRead", "Leitura por contato", "Lê ao tocar ou passar o mouse")}
             ${settingToggle("highContrast", "Alto contraste", "Cores e contornos mais visíveis")}
             ${settingToggle("largeText", "Texto ampliado", "Aumenta o texto em todas as telas")}
             ${settingToggle("visualAlerts", "Alertas visuais", "Mostra sinais além dos sons")}
@@ -1768,7 +1768,7 @@
           </div>
           <h2 class="section-title">Preferências detalhadas</h2>
           <div class="check-list">
-            ${personalizeOption("autoRead", "Suporte por áudio", "Informações e confirmações faladas")}
+            ${personalizeOption("autoRead", "Suporte por áudio", "Leitura ao tocar ou apontar para itens")}
             ${personalizeOption("highContrast", "Baixa visão", "Maior contraste visual")}
             ${personalizeOption("largeTargets", "Dificuldade motora", "Controles mais fáceis de tocar")}
           </div>
@@ -1842,9 +1842,7 @@
         render();
         window.scrollTo({ top: 0, behavior: "auto" });
         main.focus({ preventScroll: true });
-        if (state.prefs.autoRead) {
-          window.setTimeout(() => say(`Tela ${screens[screen].title}. ${screenSummary()}`), 120);
-        }
+
       }
 
       function goBack() {
@@ -2499,12 +2497,12 @@
           "Exemplos: “Rotas para o Instituto”, “Linha 310”, “Origem UEL” ou “Ajuda”. Use o guia de comandos para ver todas as frases.",
           true,
         );
-        if (state.prefs.autoRead) say("Não entendi o comando. Tente novamente.");
+        
       }
 
       function confirmAction(message) {
         showMessage("Comando executado", message);
-        if (state.prefs.autoRead) say(message);
+        
       }
 
       function say(text) {
@@ -2522,6 +2520,32 @@
         utterance.onerror = () => document.body.removeAttribute("data-speaking");
         window.speechSynthesis.speak(utterance);
       }
+
+      // Leitura por contato: mouse/trackpad, toque e foco por teclado.
+      // Não há leitura automática na navegação ou após comandos.
+      let lastReadElement = null;
+      let lastReadAt = 0;
+      function readContactElement(target) {
+        if (!state.prefs.autoRead || !(target instanceof Element)) return;
+        const element = target.closest('button, a, input, select, textarea, label, [role="button"], [data-readable], .route-card, .card, .setting, h1, h2, h3, p');
+        if (!element || element.closest('[hidden], [aria-hidden="true"]')) return;
+        const text = (element.getAttribute('aria-label') || element.getAttribute('data-readable') || element.innerText || element.textContent || '').replace(/\s+/g, ' ').trim();
+        if (!text || text.length > 360) return;
+        const now = Date.now();
+        if (element === lastReadElement && now - lastReadAt < 1400) return;
+        lastReadElement = element;
+        lastReadAt = now;
+        say(text);
+      }
+      document.addEventListener('pointerover', (event) => {
+        if (event.pointerType === 'mouse' || event.pointerType === 'pen') readContactElement(event.target);
+      });
+      document.addEventListener('pointerdown', (event) => {
+        if (event.pointerType === 'touch') readContactElement(event.target);
+      }, { passive: true });
+      document.addEventListener('focusin', (event) => {
+        if (event.target.matches('button, a, input, select, textarea, [tabindex="0"]')) readContactElement(event.target);
+      });
 
       function readScreen() {
         const text = screenSummary();
@@ -2547,7 +2571,7 @@
         const index = current < 0 ? 0 : (current + direction + elements.length) % elements.length;
         elements[index].focus();
         elements[index].scrollIntoView({ behavior: "smooth", block: "center" });
-        if (state.prefs.autoRead) say(elements[index].getAttribute("aria-label") || elements[index].textContent.trim());
+        
       }
 
       function confirmRoute() {
@@ -2579,7 +2603,7 @@
             const result = document.querySelector("#location-result");
             if (result) result.textContent = text;
             showMessage("Localização disponível", text);
-            if (state.prefs.autoRead) say(text);
+            
           },
           (error) => {
             const messages = {
@@ -2604,7 +2628,7 @@
       function preferenceLabel(key) {
         return {
           voiceCommands: "Comandos de voz",
-          autoRead: "Leitura automática",
+          autoRead: "Leitura por contato",
           highContrast: "Alto contraste",
           largeText: "Texto ampliado",
           visualAlerts: "Avisos visuais",
