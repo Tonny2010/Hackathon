@@ -1037,6 +1037,45 @@
         height: 42px;
       }
 
+      /* Wake word "Ei Nexus": indicador discreto quando a escuta contínua está ativa. */
+      .wake-indicator {
+        position: fixed;
+        z-index: 48;
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: calc(150px + env(safe-area-inset-bottom));
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: var(--navy);
+        color: #fff;
+        font-size: 0.78rem;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 6px 18px rgb(0 20 50 / 25%);
+        opacity: 0.94;
+        pointer-events: none;
+        max-width: calc(100vw - 28px);
+      }
+      .wake-indicator::before {
+        content: "";
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #6ce3c6;
+        animation: wake-pulse 1.4s ease-in-out infinite;
+        flex-shrink: 0;
+      }
+      @keyframes wake-pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: .4; transform: scale(.8); }
+      }
+      body.simplify-mode .wake-indicator {
+        font-size: .9rem;
+        padding: 10px 18px;
+      }
+
     </style>
   </head>
   <body>
@@ -1087,6 +1126,10 @@
           <span>Perfil</span>
         </button>
       </nav>
+    </div>
+
+    <div class="wake-indicator" id="wake-indicator" role="status" aria-live="polite" hidden>
+      Ouvindo por “Ei Nexus”…
     </div>
 
     <button class="mic-fab" id="microphone-button" aria-pressed="false">
@@ -1140,6 +1183,14 @@
           <span class="check" aria-hidden="true"></span>
           <span><strong>Botões e áreas de toque maiores</strong><br /><small>Controles mais fáceis de selecionar</small></span>
         </button>
+        <button class="need-option" data-pref="simplifyMode" aria-pressed="false">
+          <span class="check" aria-hidden="true"></span>
+          <span><strong>Modo simplificado</strong><br /><small>Botões maiores e layout mais limpo</small></span>
+        </button>
+        <button class="need-option" data-pref="wakeWord" aria-pressed="false">
+          <span class="check" aria-hidden="true"></span>
+          <span><strong>Ativar “Ei Nexus”</strong><br /><small>Fale “Ei Nexus” e depois o comando, sem tocar no microfone</small></span>
+        </button>
         <div class="modal-actions">
           <button class="button secondary" id="skip-onboarding">Pular</button>
           <button class="button" id="save-onboarding">Aplicar recursos</button>
@@ -1176,8 +1227,16 @@
           vibration: true,
           largeTargets: false,
           simplifyMode: false,
+          wakeWord: false,
         },
       };
+
+      // Wake word — controle da escuta contínua
+      let wakeActive = false;
+      let wakeRecognition = null;
+      let wakeRestartTimer = null;
+      let startingWake = false;
+      let ttsActive = false;
 
       const screens = {
         welcome: { title: "Boas-vindas", render: renderWelcome },
@@ -1211,9 +1270,6 @@
         account: { title: "Dados da conta", render: renderAccount },
       };
 
-      // Endereços e denominações públicos; conexões, tempos e opções abaixo são cenários de teste.
-      // A linha 310 e a parada do Instituto foram confirmadas pela própria instituição.
-      // Coordenadas fornecidas pelo usuário. O Instituto é procurado por endereço, sem inventar latitude/longitude.
       const MAP_PLACES = {
         londrina: { name: "Londrina (centro)", lat: -23.3045, lng: -51.1696 },
         cathedral: { name: "Catedral de Londrina", lat: -23.3103, lng: -51.1628 },
@@ -1257,6 +1313,7 @@
       ];
       const ROUTE_ORIGINS = ["Terminal Central", "Terminal Oeste", "UEL", "Shopping Catuaí", "Terminal Vivi Xavier", "Centro"];
       const VOICE_EXAMPLES = [
+        { section: "Ativação por voz", commands: ["Ei Nexus", "Como ativar o modo de voz"] },
         { section: "Viagens e destinos", commands: ["Rotas para o Instituto Roberto Miranda", "Como chegar ao Instituto", "Rota saindo da UEL para o Instituto", "Rota do Shopping Catuaí para o Instituto", "Rota do Terminal Central para o Instituto", "Destino UEL", "Origem Terminal Oeste", "Buscar rotas", "Ver opção 2", "Iniciar viagem", "Ler minha rota"] },
         { section: "Linhas e mobilidade", commands: ["Mostrar todas as linhas", "Linha 310", "Linha 904", "Linha 351", "Favoritar linha 310", "Minhas linhas favoritas", "Solicitar apoio", "Preciso de mais tempo para embarcar", "Ativar plataforma elevatória", "Minha localização"] },
         { section: "Mapa interativo", commands: ["Abrir mapa", "Mostrar Londrina no mapa", "Mostrar Catedral no mapa", "Mostrar Instituto Roberto Miranda no mapa", "Centralizar mapa", "Mapa do centro", "Abrir rota no Google Maps", "Ver mapa do instituto"] },
@@ -1335,6 +1392,7 @@
       const onboarding = document.querySelector("#onboarding");
       const appHeader = document.querySelector(".header");
       const bottomNav = document.querySelector(".bottom-nav");
+      const wakeIndicator = document.querySelector("#wake-indicator");
 
       function renderWelcome() {
         return `<section class="welcome">
@@ -1405,6 +1463,7 @@
             ${personalizeOption("visualAlerts", "Avisos visuais", "Não depende somente de sons")}
             ${personalizeOption("largeTargets", "Áreas de toque maiores", "Controles mais fáceis de selecionar")}
             ${personalizeOption("simplifyMode", "Modo simplificado", "Botões maiores e layout mais limpo")}
+            ${personalizeOption("wakeWord", "Ativar “Ei Nexus”", "Diga “Ei Nexus” e depois o comando, sem tocar em botões")}
           </div>
           <button class="button" style="width:100%;margin-top:18px" data-action="finish-personalize">Salvar e continuar</button>
           <button class="text-button" style="margin-top:8px" data-go="home">Pular por enquanto</button>
@@ -1564,7 +1623,6 @@
         if (iframe) {
           iframe.hidden = false;
           if (mapSelectedPlace === 'institute') {
-            // OSM não dispõe de geocodificação sem integração: não exibir localização aproximada como exata.
             iframe.src = osmEmbedSrc('londrina');
             setMapStatus('Instituto Roberto Miranda: abra o link Google Maps abaixo para localizar pelo endereço. O mapa de fundo permanece no centro de Londrina.');
           } else {
@@ -1811,6 +1869,7 @@
           <h2 class="section-title">Voz e áudio</h2>
           <div class="setting-group">
             ${settingToggle("voiceCommands", "Comandos de voz", "Permite controlar o aplicativo falando")}
+            ${settingToggle("wakeWord", "Ativar “Ei Nexus”", "Escuta o nome “Nexus” e ativa a voz sem tocar em botões. O microfone fica em uso contínuo.")}
             ${settingToggle("autoRead", "Leitura por contato", "Lê apenas ao tocar ou passar o mouse")}
             <label class="setting"><span><strong>Velocidade da fala</strong><small id="rate-value">${state.speechRate.toFixed(1)} vezes</small></span>
               <input id="speech-rate" type="range" min="0.6" max="1.5" step="0.1" value="${state.speechRate}" aria-label="Velocidade da fala" />
@@ -1843,6 +1902,7 @@
           <div class="status-hero"><h2>Uso do aplicativo</h2><p>Recursos para navegar, ler e compreender com mais autonomia.</p></div>
           <div class="setting-group">
             ${settingToggle("autoRead", "Leitura por contato", "Lê ao tocar ou passar o mouse")}
+            ${settingToggle("wakeWord", "Ativar “Ei Nexus”", "Escuta o nome Nexus para comandos por voz")}
             ${settingToggle("highContrast", "Alto contraste", "Cores e contornos mais visíveis")}
             ${settingToggle("largeText", "Texto ampliado", "Aumenta o texto em todas as telas")}
             ${settingToggle("visualAlerts", "Alertas visuais", "Mostra sinais além dos sons")}
@@ -1973,6 +2033,7 @@
         });
         bindScreenEvents();
         applyPreferences();
+        updateWakeIndicator();
         if (state.screen === "map") updateMapDisplay();
       }
 
@@ -2097,8 +2158,12 @@
           savePreferences();
           navigate("home");
           showMessage("Preferências aplicadas", "Você pode alterá-las em Configurações.");
+          if (state.prefs.wakeWord) {
+            startWakeWordMode();
+          }
         });
         main.querySelector('[data-action="logout"]')?.addEventListener("click", () => {
+          stopWakeWordMode();
           localStorage.removeItem("via-local-account");
           state.account = null;
           state.history = [];
@@ -2211,10 +2276,6 @@
         if (!navigator.mediaDevices?.getUserMedia) {
           throw new Error("media-unsupported");
         }
-        // A previous grant may have been revoked in browser settings.
-        // Check again rather than trusting cached state.
-
-
         if (navigator.permissions?.query) {
           try {
             const status = await navigator.permissions.query({ name: "microphone" });
@@ -2223,7 +2284,6 @@
             // Safari e outros navegadores podem não aceitar "microphone" na Permissions API.
           }
         }
-
         let stream;
         try {
           stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -2280,6 +2340,8 @@
       }
 
       function startRecognition() {
+        // Se a wake word está ativa, pausa para ouvir um comando único.
+        if (wakeActive) stopWakeWordMode();
         window.speechSynthesis?.cancel();
         const recognition = new SpeechRecognition();
         recognition.lang = "pt-BR";
@@ -2327,6 +2389,16 @@
           micButton.classList.remove("listening");
           micButton.setAttribute("aria-pressed", "false");
           listeningPanel.hidden = true;
+
+          // Volta a escutar "Ei Nexus" se o modo está ligado e não há fala em andamento.
+          if (ttsActive) return;
+          if (state.prefs.wakeWord && !wakeActive) {
+            setTimeout(() => {
+              if (state.prefs.wakeWord && !wakeActive && !state.listening && !ttsActive) {
+                startWakeWordMode();
+              }
+            }, 500);
+          }
         };
         try {
           recognition.start();
@@ -2345,6 +2417,137 @@
         announce(message);
       }
 
+      // ---- Wake word "Ei Nexus" ----
+
+      function isWakeWord(text) {
+        const value = normalize(text);
+        return /(?:^|\s)nexus(?:\s|$)/.test(value);
+      }
+
+      function updateWakeIndicator() {
+        if (wakeIndicator) wakeIndicator.hidden = !wakeActive;
+      }
+
+      function playChime() {
+        try {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (!AC) return;
+          const ctx = new AC();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.value = 784;
+          gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.08, ctx.currentTime + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.18);
+          osc.connect(gain).connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.2);
+          osc.onended = () => { try { ctx.close(); } catch {} };
+        } catch {}
+      }
+
+      function startWakeWordMode() {
+        if (!state.prefs.wakeWord) return;
+        if (!SpeechRecognition) {
+          showMessage("Reconhecimento indisponível", "Este navegador não oferece reconhecimento de voz.", true);
+          return;
+        }
+        if (state.listening || wakeActive || startingWake) return;
+        if (ttsActive) return;
+
+        startingWake = true;
+        stopWakeWordMode();
+
+        const rec = new SpeechRecognition();
+        rec.lang = "pt-BR";
+        rec.continuous = true;
+        rec.interimResults = true;
+        rec.maxAlternatives = 3;
+
+        let wakeDetected = false;
+        let cancelRestart = false;
+
+        rec.onstart = () => {
+          startingWake = false;
+          wakeActive = true;
+          wakeRecognition = rec;
+          updateWakeIndicator();
+        };
+        rec.onresult = (event) => {
+          if (wakeDetected) return;
+          let transcript = "";
+          for (let i = 0; i < event.results.length; i += 1) {
+            transcript += event.results[i][0].transcript + " ";
+          }
+          if (isWakeWord(transcript)) {
+            wakeDetected = true;
+            try { rec.stop(); } catch {}
+            onWakeDetected();
+          }
+        };
+        rec.onerror = (event) => {
+          startingWake = false;
+          if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+            cancelRestart = true;
+            state.prefs.wakeWord = false;
+            savePreferences();
+            applyPreferences();
+            showMessage(
+              "Microfone bloqueado",
+              "Permita o microfone no navegador para usar “Ei Nexus”. O recurso foi desativado.",
+              true,
+            );
+          }
+        };
+        rec.onend = () => {
+          startingWake = false;
+          wakeActive = false;
+          wakeRecognition = null;
+          updateWakeIndicator();
+          if (cancelRestart || !state.prefs.wakeWord || state.listening || ttsActive) return;
+          wakeRestartTimer = setTimeout(() => {
+            if (state.prefs.wakeWord && !wakeActive && !state.listening && !ttsActive) {
+              try { startWakeWordMode(); } catch {}
+            }
+          }, 400);
+        };
+        try {
+          rec.start();
+        } catch {
+          startingWake = false;
+        }
+      }
+
+      function stopWakeWordMode() {
+        if (wakeRestartTimer) {
+          clearTimeout(wakeRestartTimer);
+          wakeRestartTimer = null;
+        }
+        if (wakeRecognition) {
+          try { wakeRecognition.abort(); } catch {}
+          wakeRecognition = null;
+        }
+        startingWake = false;
+        wakeActive = false;
+        updateWakeIndicator();
+      }
+
+      function onWakeDetected() {
+        if (navigator.vibrate) {
+          try { navigator.vibrate([40, 30, 40]); } catch {}
+        }
+        playChime();
+        announce("Ei Nexus. Pode falar seu comando.");
+        // Abre uma janela curta de comando único. A escuta contínua já foi parada.
+        setTimeout(() => {
+          if (state.listening) return;
+          startRecognition();
+        }, 220);
+      }
+
+      // ---- Fim do bloco wake word ----
+
       function normalize(text) {
         return text
           .normalize("NFD")
@@ -2362,6 +2565,23 @@
         if (!command) return unknownCommand();
 
         const matches = (...words) => words.some((word) => command.includes(word));
+
+        // Ativação manual via frase "Ei Nexus" (dentro do guia de comandos, por exemplo).
+        if (matches("ei nexus", "hey nexus") || command === "nexus") {
+          if (!state.prefs.wakeWord) {
+            return showMessage(
+              "Ei Nexus desativado",
+              "Ative “Ei Nexus” em Configurações → Voz e áudio para usar por voz.",
+              true,
+            );
+          }
+          if (state.listening) {
+            return confirmAction("Já estou ouvindo. Diga seu comando.");
+          }
+          startRecognition();
+          return confirmAction("Pode falar seu comando.");
+        }
+
         if (matches("parar de ouvir", "desligar microfone", "encerrar escuta") || command === "parar") {
           stopListening("Escuta interrompida.");
           return confirmAction("Escuta interrompida.");
@@ -2437,7 +2657,6 @@
           return confirmAction('Mostrando o centro de Londrina no mapa.');
         }
         if (matches('abrir rota no google maps', 'abrir no google maps', 'ver no google maps')) {
-          // Abrir um mapa exige escolha explícita; não iniciar navegação sem confirmação.
           navigate('map');
           return confirmAction('Use o link Abrir lugar selecionado no Google Maps para continuar.');
         }
@@ -2519,7 +2738,6 @@
           navigate("tripOptions");
           return confirmAction(`Exibindo rotas de ${state.origin} para ${state.destination}.`);
         }
-        // "Rota do Shopping Catuaí para o Instituto".
         const routeFromTo = command.match(/^(?:rota|trajeto|percurso)\s+(?:do|da|de)\s+(.+?)\s+(?:para|ate|ao|a)\s+(.+)/);
         if (routeFromTo) {
           state.origin = canonicalPlace(routeFromTo[1]);
@@ -2588,12 +2806,12 @@
           "Exemplos: “Rotas para o Instituto”, “Linha 310”, “Origem UEL” ou “Ajuda”. Use o guia de comandos para ver todas as frases.",
           true,
         );
-        
+
       }
 
       function confirmAction(message) {
         showMessage("Comando executado", message);
-        
+
       }
 
       function say(text) {
@@ -2601,19 +2819,31 @@
           showMessage("Leitura indisponível", "Este navegador não oferece síntese de voz.", true);
           return;
         }
+        ttsActive = true;
         if (state.listening) stopListening();
+        if (wakeActive) stopWakeWordMode();
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = "pt-BR";
         utterance.rate = state.speechRate;
         utterance.onstart = () => document.body.setAttribute("data-speaking", "true");
-        utterance.onend = () => document.body.removeAttribute("data-speaking");
-        utterance.onerror = () => document.body.removeAttribute("data-speaking");
+        const finish = () => {
+          document.body.removeAttribute("data-speaking");
+          ttsActive = false;
+          if (state.prefs.wakeWord && !wakeActive && !state.listening) {
+            setTimeout(() => {
+              if (state.prefs.wakeWord && !wakeActive && !state.listening && !ttsActive) {
+                startWakeWordMode();
+              }
+            }, 400);
+          }
+        };
+        utterance.onend = finish;
+        utterance.onerror = finish;
         window.speechSynthesis.speak(utterance);
       }
 
       // Leitura por contato: mouse/trackpad, toque e foco por teclado.
-      // Não há leitura automática na navegação ou após comandos.
       let lastReadElement = null;
       let lastReadAt = 0;
       function readContactElement(target) {
@@ -2662,7 +2892,7 @@
         const index = current < 0 ? 0 : (current + direction + elements.length) % elements.length;
         elements[index].focus();
         elements[index].scrollIntoView({ behavior: "smooth", block: "center" });
-        
+
       }
 
       function confirmRoute() {
@@ -2694,7 +2924,7 @@
             const result = document.querySelector("#location-result");
             if (result) result.textContent = text;
             showMessage("Localização disponível", text);
-            
+
           },
           (error) => {
             const messages = {
@@ -2714,6 +2944,13 @@
         applyPreferences();
         render();
         announce(`${preferenceLabel(key)} ${state.prefs[key] ? "ativado" : "desativado"}.`);
+        if (key === "wakeWord") {
+          if (state.prefs.wakeWord) {
+            startWakeWordMode();
+          } else {
+            stopWakeWordMode();
+          }
+        }
       }
 
       function preferenceLabel(key) {
@@ -2726,6 +2963,7 @@
           vibration: "Vibração",
           largeTargets: "Áreas de toque maiores",
           simplifyMode: "Modo simplificado",
+          wakeWord: "Ei Nexus",
         }[key] || key;
       }
 
@@ -2805,6 +3043,9 @@
         applyPreferences();
         render();
         announce("Preferências aplicadas.");
+        if (state.prefs.wakeWord) {
+          startWakeWordMode();
+        }
       });
       onboarding.querySelectorAll("[data-pref]").forEach((button) => {
         button.addEventListener("click", () => {
@@ -2813,6 +3054,14 @@
           button.setAttribute("aria-pressed", String(state.prefs[key]));
           button.querySelector(".check").textContent = state.prefs[key] ? "✓" : "";
         });
+      });
+
+      // Auto-restart da wake word no primeiro gesto após o carregamento,
+      // necessário porque o navegador exige interação do usuário para liberar o microfone.
+      document.addEventListener("pointerdown", () => {
+        if (state.prefs.wakeWord && !wakeActive && !state.listening && !ttsActive) {
+          startWakeWordMode();
+        }
       });
 
       loadPreferences();
