@@ -905,7 +905,6 @@
 @media(max-width:360px){.hero h2{font-size:1.9rem}.content{padding:12px}.header{gap:4px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
 
-      /* Rotas e comandos expandidos: controles com alvos confortáveis em telas pequenas. */
       .feature-destination {
         margin-top: 18px;
         padding: 18px;
@@ -958,7 +957,6 @@
       body.high-contrast .feature-destination { background: #fff; border: 2px solid #000; }
       body.high-contrast .route-choice, body.high-contrast .command-chip, body.high-contrast .destination-chip { border: 2px solid #000; color: #000; }
 
-      /* Modo simplificado: alvos maiores, uma coluna por linha e mais respiro visual. */
       body.simplify-mode .button,
       body.simplify-mode .text-button,
       body.simplify-mode .quick-button,
@@ -1037,7 +1035,6 @@
         height: 42px;
       }
 
-      /* Wake word "Ei Nexus": indicador discreto quando a escuta contínua está ativa. */
       .wake-indicator {
         position: fixed;
         z-index: 48;
@@ -1074,6 +1071,19 @@
       body.simplify-mode .wake-indicator {
         font-size: .9rem;
         padding: 10px 18px;
+      }
+
+      /* Botão de anúncio em voz alta (destaque sutil) */
+      .announce-button {
+        background: linear-gradient(135deg, var(--blue), var(--blue-dark));
+        color: #fff;
+        border: 0;
+        box-shadow: 0 6px 16px rgb(18 97 232 / 30%);
+      }
+      body.high-contrast .announce-button {
+        background: #ffe500;
+        color: #000;
+        border: 2px solid #000;
       }
 
     </style>
@@ -1231,7 +1241,6 @@
         },
       };
 
-      // Wake word — controle da escuta contínua
       let wakeActive = false;
       let wakeRecognition = null;
       let wakeRestartTimer = null;
@@ -1314,6 +1323,7 @@
       const ROUTE_ORIGINS = ["Terminal Central", "Terminal Oeste", "UEL", "Shopping Catuaí", "Terminal Vivi Xavier", "Centro"];
       const VOICE_EXAMPLES = [
         { section: "Ativação por voz", commands: ["Ei Nexus", "Como ativar o modo de voz"] },
+        { section: "Anúncio em voz alta", commands: ["Anunciar próxima linha", "Qual a próxima linha", "Quando passa o próximo ônibus", "Próximo ônibus", "Falar próxima linha"] },
         { section: "Viagens e destinos", commands: ["Rotas para o Instituto Roberto Miranda", "Como chegar ao Instituto", "Rota saindo da UEL para o Instituto", "Rota do Shopping Catuaí para o Instituto", "Rota do Terminal Central para o Instituto", "Destino UEL", "Origem Terminal Oeste", "Buscar rotas", "Ver opção 2", "Iniciar viagem", "Ler minha rota"] },
         { section: "Linhas e mobilidade", commands: ["Mostrar todas as linhas", "Linha 310", "Linha 904", "Linha 351", "Favoritar linha 310", "Minhas linhas favoritas", "Solicitar apoio", "Preciso de mais tempo para embarcar", "Ativar plataforma elevatória", "Minha localização"] },
         { section: "Mapa interativo", commands: ["Abrir mapa", "Mostrar Londrina no mapa", "Mostrar Catedral no mapa", "Mostrar Instituto Roberto Miranda no mapa", "Centralizar mapa", "Mapa do centro", "Abrir rota no Google Maps", "Ver mapa do instituto"] },
@@ -1743,6 +1753,7 @@
           <article class="card" data-readable><p class="eyebrow">PRÉVIA DE VIAGEM · SIMULAÇÃO</p><h2>${escapeHtml(route.from)} → ${escapeHtml(route.to)}</h2><p>${escapeHtml(route.description)}</p><div class="route-lines" style="margin-top:12px">${linePills(route.lines)}</div></article>
           <article class="card" data-readable><h3>Como seria este trajeto</h3><p>${escapeHtml(route.via)}</p><p style="margin-top:10px"><strong>Tempo fictício:</strong> ${escapeHtml(route.duration)}</p><p style="margin-top:10px">Nenhum ônibus ou parada está sendo acompanhado em tempo real. Consulte a operadora antes de embarcar.</p></article>
           ${route.to === INSTITUTE ? `<article class="card"><h3>Chegada ao Instituto</h3><p>${escapeHtml(INSTITUTE_ADDRESS)}</p><p>Informação da instituição: a linha 310 tem parada em frente ao local.</p></article>` : ""}
+          <button class="button announce-button" style="width:100%;margin-bottom:12px" data-action="announce-next">🔊 Anunciar próxima linha em voz alta</button>
           <div class="quick-grid"><button class="button secondary" data-action="speak-trip">Ouvir esta rota</button><button class="button" data-go="tripOptions">Ver outras opções</button></div>
           <button class="button secondary" style="width:100%;margin-top:12px" data-go="wait">Simular apoio no embarque</button>
         </section>`;
@@ -1784,6 +1795,7 @@
           <div class="line-list">
             ${["310", "904", "351", "201", "108", "305"].map((line) => `<button class="line-button" data-select-line="${line}"><span class="line-number">${line}</span><span><strong>Linha ${line}</strong><small>Selecione para continuar</small></span><span>${state.selectedLine === line ? "✓" : "›"}</span></button>`).join("")}
           </div>
+          <button class="button announce-button" style="width:100%;margin-top:14px" data-action="announce-next">🔊 Qual a próxima linha para o meu destino?</button>
           <button class="button" style="width:100%;margin-top:18px" data-go="waitConfirm">Continuar</button>
         </section>`;
       }
@@ -2116,6 +2128,9 @@
         main.querySelectorAll('[data-action="confirm-route"]').forEach((button) => {
           button.addEventListener("click", confirmRoute);
         });
+        main.querySelectorAll('[data-action="announce-next"]').forEach((button) => {
+          button.addEventListener("click", announceNextLine);
+        });
         main.querySelectorAll("[data-pref-screen]").forEach((button) => {
           button.addEventListener("click", () => togglePreference(button.dataset.prefScreen));
         });
@@ -2340,7 +2355,6 @@
       }
 
       function startRecognition() {
-        // Se a wake word está ativa, pausa para ouvir um comando único.
         if (wakeActive) stopWakeWordMode();
         window.speechSynthesis?.cancel();
         const recognition = new SpeechRecognition();
@@ -2390,7 +2404,6 @@
           micButton.setAttribute("aria-pressed", "false");
           listeningPanel.hidden = true;
 
-          // Volta a escutar "Ei Nexus" se o modo está ligado e não há fala em andamento.
           if (ttsActive) return;
           if (state.prefs.wakeWord && !wakeActive) {
             setTimeout(() => {
@@ -2416,8 +2429,6 @@
         listeningPanel.hidden = true;
         announce(message);
       }
-
-      // ---- Wake word "Ei Nexus" ----
 
       function isWakeWord(text) {
         const value = normalize(text);
@@ -2539,14 +2550,11 @@
         }
         playChime();
         announce("Ei Nexus. Pode falar seu comando.");
-        // Abre uma janela curta de comando único. A escuta contínua já foi parada.
         setTimeout(() => {
           if (state.listening) return;
           startRecognition();
         }, 220);
       }
-
-      // ---- Fim do bloco wake word ----
 
       function normalize(text) {
         return text
@@ -2558,6 +2566,70 @@
           .trim();
       }
 
+      // ---- Anúncio falado da próxima linha ----
+
+      function simulatedNextBusEta(route) {
+        const seed = Math.floor(Date.now() / 60000);
+        const pseudo = (seed * 9301 + 49297) % 233280;
+        const base = route && route.verified ? 4 : 3;
+        return base + (pseudo % 9);
+      }
+
+      async function announceNextLine() {
+        const destination = canonicalPlace(state.destination);
+        if (!destination) {
+          const msg = "Primeiro escolha um destino para eu poder anunciar a próxima linha.";
+          showMessage("Destino não definido", msg, true);
+          say(msg);
+          return;
+        }
+
+        if (wakeActive) stopWakeWordMode();
+        showMessage("Consultando sua localização", "Aguarde, verificando a próxima linha para o seu destino.");
+
+        let locationPhrase = "";
+        if (navigator.geolocation) {
+          try {
+            const position = await new Promise((resolve, reject) => {
+              navigator.geolocation.getCurrentPosition(resolve, reject, {
+                enableHighAccuracy: false,
+                maximumAge: 60000,
+                timeout: 6000,
+              });
+            });
+            const accuracy = Math.round(position.coords.accuracy);
+            locationPhrase = `Sua localização foi identificada com precisão de aproximadamente ${accuracy} metros.`;
+          } catch {
+            locationPhrase = "Não consegui obter sua localização agora, mas posso informar a linha pelo destino escolhido.";
+          }
+        } else {
+          locationPhrase = "Geolocalização não está disponível neste navegador.";
+        }
+
+        const routes = ROUTES.filter((r) => normalize(r.to) === normalize(destination));
+        if (!routes.length) {
+          const msg = `Ainda não há linhas cadastradas neste protótipo para ${destination}.`;
+          showMessage("Sem linha cadastrada", msg, true);
+          say(`${locationPhrase} ${msg}`);
+          return;
+        }
+
+        const origin = canonicalPlace(state.origin);
+        const chosen = routes.find((r) => normalize(r.from) === normalize(origin)) || routes[0];
+        const lineNumber = chosen.lines[0];
+        const line = LINES.find((l) => l.number === lineNumber);
+        const eta = simulatedNextBusEta(chosen);
+        const isMulti = chosen.lines.length > 1;
+        const extra = isMulti ? `, com integração para a linha ${chosen.lines.slice(1).join(" e ")}` : "";
+        const lineText = line ? `Linha ${lineNumber}, ${line.name}${extra}` : `Linha ${lineNumber}${extra}`;
+        const spoken = `${locationPhrase} Para o destino ${destination}, a próxima ${lineText} está prevista em aproximadamente ${eta} minutos. Este é um anúncio simulado, sem dados de tempo real.`;
+
+        showMessage("Próxima linha anunciada", spoken);
+        say(spoken);
+      }
+
+      // ---- Fim do anúncio falado ----
+
       function processCommand(rawCommand) {
         const command = normalize(rawCommand);
         state.command = String(rawCommand || "").trim();
@@ -2566,7 +2638,6 @@
 
         const matches = (...words) => words.some((word) => command.includes(word));
 
-        // Ativação manual via frase "Ei Nexus" (dentro do guia de comandos, por exemplo).
         if (matches("ei nexus", "hey nexus") || command === "nexus") {
           if (!state.prefs.wakeWord) {
             return showMessage(
@@ -2580,6 +2651,12 @@
           }
           startRecognition();
           return confirmAction("Pode falar seu comando.");
+        }
+
+        // Anúncio falado da próxima linha
+        if (matches("anunciar proxima linha", "anunciar proximo onibus", "anunciar proximo ônibus", "proxima linha em voz alta", "falar proxima linha", "qual a proxima linha", "qual o proximo onibus", "qual o proximo ônibus", "quando passa o proximo", "quando passa o onibus", "quando passa o ônibus", "proximo onibus", "proximo ônibus")) {
+          announceNextLine();
+          return confirmAction("Consultando a próxima linha para o seu destino. Você vai ouvir o resultado.");
         }
 
         if (matches("parar de ouvir", "desligar microfone", "encerrar escuta") || command === "parar") {
@@ -2843,7 +2920,6 @@
         window.speechSynthesis.speak(utterance);
       }
 
-      // Leitura por contato: mouse/trackpad, toque e foco por teclado.
       let lastReadElement = null;
       let lastReadAt = 0;
       function readContactElement(target) {
@@ -3056,8 +3132,6 @@
         });
       });
 
-      // Auto-restart da wake word no primeiro gesto após o carregamento,
-      // necessário porque o navegador exige interação do usuário para liberar o microfone.
       document.addEventListener("pointerdown", () => {
         if (state.prefs.wakeWord && !wakeActive && !state.listening && !ttsActive) {
           startWakeWordMode();
@@ -3080,6 +3154,7 @@
       window.voice = voice;
       window.processCommand = processCommand;
       window.say = say;
+      window.announceNextLine = announceNextLine;
     </script>
   </body>
 </html>
