@@ -1073,7 +1073,6 @@
         padding: 10px 18px;
       }
 
-      /* Botão de anúncio em voz alta (destaque sutil) */
       .announce-button {
         background: linear-gradient(135deg, var(--blue), var(--blue-dark));
         color: #fff;
@@ -1246,6 +1245,7 @@
       let wakeRestartTimer = null;
       let startingWake = false;
       let ttsActive = false;
+      let autoAnnounceTimer = null;
 
       const screens = {
         welcome: { title: "Boas-vindas", render: renderWelcome },
@@ -2047,6 +2047,18 @@
         applyPreferences();
         updateWakeIndicator();
         if (state.screen === "map") updateMapDisplay();
+
+        // Anúncio automático 1 s após entrar na tela de rotas.
+        if (state.screen === "tripOptions" || state.screen === "tripActive") {
+          window.clearTimeout(autoAnnounceTimer);
+          autoAnnounceTimer = window.setTimeout(() => {
+            if ((state.screen === "tripOptions" || state.screen === "tripActive") && state.destination) {
+              announceNextLine();
+            }
+          }, 1000);
+        } else {
+          window.clearTimeout(autoAnnounceTimer);
+        }
       }
 
       function bindScreenEvents() {
@@ -2566,8 +2578,6 @@
           .trim();
       }
 
-      // ---- Anúncio falado da próxima linha ----
-
       function simulatedNextBusEta(route) {
         const seed = Math.floor(Date.now() / 60000);
         const pseudo = (seed * 9301 + 49297) % 233280;
@@ -2576,6 +2586,7 @@
       }
 
       async function announceNextLine() {
+        unlockTTS();
         const destination = canonicalPlace(state.destination);
         if (!destination) {
           const msg = "Primeiro escolha um destino para eu poder anunciar a próxima linha.";
@@ -2627,8 +2638,6 @@
         showMessage("Próxima linha anunciada", spoken);
         say(spoken);
       }
-
-      // ---- Fim do anúncio falado ----
 
       function processCommand(rawCommand) {
         const command = normalize(rawCommand);
@@ -2899,11 +2908,26 @@
         ttsActive = true;
         if (state.listening) stopListening();
         if (wakeActive) stopWakeWordMode();
-        window.speechSynthesis.cancel();
+
+        try { window.speechSynthesis.cancel(); } catch {}
+        try { window.speechSynthesis.resume(); } catch {}
+
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = "pt-BR";
         utterance.rate = state.speechRate;
+        utterance.volume = 1;
+        utterance.pitch = 1;
+
+        // Escolhe a melhor voz PT-BR disponível.
+        try {
+          const voices = window.speechSynthesis.getVoices() || [];
+          const pt = voices.find((v) => /^pt[-_]br$/i.test(v.lang))
+                  || voices.find((v) => /^pt/i.test(v.lang));
+          if (pt) utterance.voice = pt;
+        } catch {}
+
         utterance.onstart = () => document.body.setAttribute("data-speaking", "true");
+
         const finish = () => {
           document.body.removeAttribute("data-speaking");
           ttsActive = false;
@@ -2916,8 +2940,30 @@
           }
         };
         utterance.onend = finish;
-        utterance.onerror = finish;
-        window.speechSynthesis.speak(utterance);
+        utterance.onerror = (event) => {
+          console.warn("TTS error", event.error, event);
+          finish();
+        };
+
+        setTimeout(() => {
+          try {
+            window.speechSynthesis.speak(utterance);
+            setTimeout(() => { try { window.speechSynthesis.resume(); } catch {} }, 300);
+          } catch (error) {
+            console.warn("speak falhou", error);
+            finish();
+          }
+        }, 40);
+      }
+
+      function unlockTTS() {
+        if (!("speechSynthesis" in window)) return;
+        try {
+          const u = new SpeechSynthesisUtterance(" ");
+          u.volume = 0;
+          u.lang = "pt-BR";
+          window.speechSynthesis.speak(u);
+        } catch {}
       }
 
       let lastReadElement = null;
@@ -3133,10 +3179,11 @@
       });
 
       document.addEventListener("pointerdown", () => {
+        unlockTTS();
         if (state.prefs.wakeWord && !wakeActive && !state.listening && !ttsActive) {
           startWakeWordMode();
         }
-      });
+      }, { passive: true });
 
       loadPreferences();
       try {
@@ -3151,10 +3198,18 @@
       applyPreferences();
       render();
 
+      if ("speechSynthesis" in window) {
+        window.speechSynthesis.onvoiceschanged = () => {
+          try { window.speechSynthesis.getVoices(); } catch {}
+        };
+        try { window.speechSynthesis.getVoices(); } catch {}
+      }
+
       window.voice = voice;
       window.processCommand = processCommand;
       window.say = say;
       window.announceNextLine = announceNextLine;
+      window.unlockTTS = unlockTTS;
     </script>
   </body>
 </html>
