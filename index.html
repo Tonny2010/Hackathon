@@ -958,6 +958,85 @@
       body.high-contrast .feature-destination { background: #fff; border: 2px solid #000; }
       body.high-contrast .route-choice, body.high-contrast .command-chip, body.high-contrast .destination-chip { border: 2px solid #000; color: #000; }
 
+      /* Modo simplificado: alvos maiores, uma coluna por linha e mais respiro visual. */
+      body.simplify-mode .button,
+      body.simplify-mode .text-button,
+      body.simplify-mode .quick-button,
+      body.simplify-mode .menu-button,
+      body.simplify-mode .line-button,
+      body.simplify-mode .social-button,
+      body.simplify-mode .need-option,
+      body.simplify-mode .check-option,
+      body.simplify-mode .command-chip,
+      body.simplify-mode .destination-chip,
+      body.simplify-mode .search-button,
+      body.simplify-mode .voice-card,
+      body.simplify-mode .route-card,
+      body.simplify-mode .map-controls button {
+        min-height: 66px;
+      }
+      body.simplify-mode .setting {
+        min-height: 76px;
+      }
+      body.simplify-mode input,
+      body.simplify-mode select,
+      body.simplify-mode .command-input {
+        min-height: 58px;
+      }
+      body.simplify-mode .icon-button {
+        width: 56px;
+        min-height: 56px;
+      }
+      body.simplify-mode .quick-grid,
+      body.simplify-mode .modal-actions,
+      body.simplify-mode .fallback {
+        grid-template-columns: 1fr;
+      }
+      body.simplify-mode .line-button {
+        grid-template-columns: 64px minmax(0, 1fr) auto;
+        gap: 12px;
+      }
+      body.simplify-mode .content {
+        padding: 20px 18px;
+      }
+      body.simplify-mode .section-title {
+        font-size: 1.28rem;
+        margin-top: 24px;
+      }
+      body.simplify-mode .card,
+      body.simplify-mode .route-card,
+      body.simplify-mode .setting-group,
+      body.simplify-mode .menu-button {
+        margin-bottom: 16px;
+      }
+      body.simplify-mode button:focus-visible,
+      body.simplify-mode input:focus-visible,
+      body.simplify-mode select:focus-visible,
+      body.simplify-mode [tabindex]:focus-visible {
+        outline-width: 6px;
+        outline-offset: 4px;
+      }
+      body.simplify-mode .bottom-nav button {
+        font-size: .85rem;
+        min-height: 58px;
+      }
+      body.simplify-mode .bottom-nav .icon {
+        width: 26px;
+        height: 26px;
+      }
+      body.simplify-mode .mic-fab {
+        min-height: 60px;
+        padding: 10px 16px 10px 10px;
+        font-size: 1rem;
+      }
+      body.simplify-mode .mic-fab strong {
+        display: inline;
+      }
+      body.simplify-mode .mic-circle {
+        width: 42px;
+        height: 42px;
+      }
+
     </style>
   </head>
   <body>
@@ -1096,6 +1175,7 @@
           visualAlerts: false,
           vibration: true,
           largeTargets: false,
+          simplifyMode: false,
         },
       };
 
@@ -1180,7 +1260,7 @@
         { section: "Viagens e destinos", commands: ["Rotas para o Instituto Roberto Miranda", "Como chegar ao Instituto", "Rota saindo da UEL para o Instituto", "Rota do Shopping Catuaí para o Instituto", "Rota do Terminal Central para o Instituto", "Destino UEL", "Origem Terminal Oeste", "Buscar rotas", "Ver opção 2", "Iniciar viagem", "Ler minha rota"] },
         { section: "Linhas e mobilidade", commands: ["Mostrar todas as linhas", "Linha 310", "Linha 904", "Linha 351", "Favoritar linha 310", "Minhas linhas favoritas", "Solicitar apoio", "Preciso de mais tempo para embarcar", "Ativar plataforma elevatória", "Minha localização"] },
         { section: "Mapa interativo", commands: ["Abrir mapa", "Mostrar Londrina no mapa", "Mostrar Catedral no mapa", "Mostrar Instituto Roberto Miranda no mapa", "Centralizar mapa", "Mapa do centro", "Abrir rota no Google Maps", "Ver mapa do instituto"] },
-        { section: "Navegação e leitura", commands: ["Abrir mapa", "Planejar viagem", "Minhas viagens", "Abrir perfil", "Abrir configurações", "Abrir acessibilidade", "Mostrar notificações", "Histórico de viagens", "Ler tela", "Parar leitura", "Aumentar texto", "Diminuir texto", "Ativar alto contraste", "Desativar alto contraste", "Próximo elemento", "Elemento anterior", "Selecionar", "Voltar", "Início", "Ajuda", "Parar de ouvir"] },
+        { section: "Navegação e leitura", commands: ["Abrir mapa", "Planejar viagem", "Minhas viagens", "Abrir perfil", "Abrir configurações", "Abrir acessibilidade", "Mostrar notificações", "Histórico de viagens", "Ler tela", "Parar leitura", "Aumentar texto", "Diminuir texto", "Ativar alto contraste", "Desativar alto contraste", "Ativar modo simplificado", "Desativar modo simplificado", "Próximo elemento", "Elemento anterior", "Selecionar", "Voltar", "Início", "Ajuda", "Parar de ouvir"] },
       ];
 
       function canonicalPlace(raw) {
@@ -1324,6 +1404,7 @@
             ${personalizeOption("largeText", "Textos maiores", "Amplia os textos em todas as telas")}
             ${personalizeOption("visualAlerts", "Avisos visuais", "Não depende somente de sons")}
             ${personalizeOption("largeTargets", "Áreas de toque maiores", "Controles mais fáceis de selecionar")}
+            ${personalizeOption("simplifyMode", "Modo simplificado", "Botões maiores e layout mais limpo")}
           </div>
           <button class="button" style="width:100%;margin-top:18px" data-action="finish-personalize">Salvar e continuar</button>
           <button class="text-button" style="margin-top:8px" data-go="home">Pular por enquanto</button>
@@ -1742,6 +1823,7 @@
             ${settingToggle("visualAlerts", "Avisos visuais", "Mostra sinais além dos sons")}
             ${settingToggle("vibration", "Vibração", "Vibra em avisos quando disponível")}
             ${settingToggle("largeTargets", "Áreas de toque maiores", "Facilita a seleção de controles")}
+            ${settingToggle("simplifyMode", "Modo simplificado", "Botões maiores, uma coluna por linha, menos ruído visual")}
           </div>
           <h2 class="section-title">Guia completo de voz</h2>
           <div class="card"><h3>Mais de 40 frases disponíveis</h3><p>Buscar rotas, escolher origens, selecionar opções, pedir apoio, ler instruções e personalizar acessibilidade.</p><button class="button secondary" style="width:100%;margin-top:12px" data-go="voiceHelp">Ver e testar todos os comandos</button></div>
@@ -1765,6 +1847,7 @@
             ${settingToggle("largeText", "Texto ampliado", "Aumenta o texto em todas as telas")}
             ${settingToggle("visualAlerts", "Alertas visuais", "Mostra sinais além dos sons")}
             ${settingToggle("largeTargets", "Áreas de toque maiores", "Amplia os controles")}
+            ${settingToggle("simplifyMode", "Modo simplificado", "Botões maiores e layout mais limpo")}
           </div>
           <h2 class="section-title">Preferências detalhadas</h2>
           <div class="check-list">
@@ -2299,6 +2382,14 @@
           if (state.prefs.highContrast) togglePreference("highContrast");
           return confirmAction("Alto contraste desativado.");
         }
+        if (!matches("desativar modo simplificado", "desligar modo simplificado") && matches("ativar modo simplificado", "ligar modo simplificado", "simplificar layout", "simplificar tela", "modo simplificado", "botoes maiores")) {
+          if (!state.prefs.simplifyMode) togglePreference("simplifyMode");
+          return confirmAction("Modo simplificado ativado. Botões e textos maiores, uma coluna por linha.");
+        }
+        if (matches("desativar modo simplificado", "desligar modo simplificado", "layout normal", "modo padrao")) {
+          if (state.prefs.simplifyMode) togglePreference("simplifyMode");
+          return confirmAction("Modo simplificado desativado.");
+        }
         if (matches("aumentar texto", "aumentar letra", "letra maior", "ampliar texto")) {
           if (!state.prefs.largeText) togglePreference("largeText");
           return confirmAction("Tamanho do texto aumentado.");
@@ -2634,6 +2725,7 @@
           visualAlerts: "Avisos visuais",
           vibration: "Vibração",
           largeTargets: "Áreas de toque maiores",
+          simplifyMode: "Modo simplificado",
         }[key] || key;
       }
 
@@ -2641,7 +2733,10 @@
         document.body.classList.toggle("high-contrast", state.prefs.highContrast);
         document.body.classList.toggle("large-targets", state.prefs.largeTargets);
         document.body.classList.toggle("visual-alerts", state.prefs.visualAlerts);
-        document.documentElement.style.setProperty("--text-scale", state.prefs.largeText ? "1.18" : "1");
+        document.body.classList.toggle("simplify-mode", state.prefs.simplifyMode);
+        const baseScale = state.prefs.largeText ? 1.18 : 1;
+        const finalScale = state.prefs.simplifyMode ? Math.max(baseScale, 1.2) : baseScale;
+        document.documentElement.style.setProperty("--text-scale", String(finalScale));
         micButton.hidden =
           !state.prefs.voiceCommands || micButton.dataset.screenHidden === "true";
       }
